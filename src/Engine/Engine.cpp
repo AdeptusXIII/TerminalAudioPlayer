@@ -35,28 +35,39 @@ void MEngine::Init()
 
 void MEngine::SyncAudioState() 
 {
-    std::lock_guard<std::mutex> Lock(EngineMutex);
+    EPlaybackMode CurrentPlaybackMode = EPlaybackMode::Once;
+    bool bShouldReact = false;
     
-    if (AudioPlayerState == EAudioPlayerState::Playing && AudioBackend.IsStopped()) 
     {
-        if (PlaybackMode == EPlaybackMode::LoopAll) 
-        {
-            if (TryPlayNextTrackOrFirst()) 
-            {
-                return;
-            }
-        }
+        std::lock_guard<std::mutex> Lock(EngineMutex);
         
-        if (PlaybackMode == EPlaybackMode::LoopShuffle) 
+        if (AudioPlayerState == EAudioPlayerState::Playing && AudioBackend.IsStopped()) 
         {
-            if (TryPlayRandomTrack()) 
-            {
-                return;
-            }
+            bShouldReact = true;
+            CurrentPlaybackMode = PlaybackMode;
         }
-        
-        SetAudioPlayerState(EAudioPlayerState::Idle);
     }
+    
+    if (!bShouldReact) return;
+    
+    if (CurrentPlaybackMode == EPlaybackMode::LoopAll) 
+    {
+        if (TryPlayNextTrackOrFirst()) 
+        {
+            return;
+        }
+    }
+        
+    if (CurrentPlaybackMode == EPlaybackMode::LoopShuffle) 
+    {
+        if (TryPlayRandomTrack()) 
+        {
+            return;
+        }
+    }
+    
+    std::lock_guard<std::mutex> Lock(EngineMutex);
+    SetAudioPlayerState(EAudioPlayerState::Idle);
 }
 
 void MEngine::RunMainLoop() 
@@ -428,8 +439,7 @@ void MEngine::HandleMainMenuOption(EMainMenuOption InOption)
 
 void MEngine::HandleLibraryMenuOption(ELibraryMenuOption InOption)
 {
-    switch (InOption) 
-    {
+    switch (InOption) {
         case ELibraryMenuOption::List:
             PrintTrackList();
             break;
@@ -438,11 +448,14 @@ void MEngine::HandleLibraryMenuOption(ELibraryMenuOption InOption)
             SelectTrackByIndex();
             break;
             
-        case ELibraryMenuOption::Refresh:
-            RefreshTrackLibrary(DefaultContentDir);
-            std::cout << "[TAP::LIBRARY] Library refreshed. Total tracks found: "
-                      << TrackLibrary.GetTrackListSize() << "." << std::endl;
-            break;
+        case ELibraryMenuOption::Refresh: 
+            {
+                RefreshTrackLibrary(DefaultContentDir);
+                std::lock_guard<std::mutex> Lock(EngineMutex);
+                std::cout << "[TAP::LIBRARY] Library refreshed. Total tracks found: "
+                          << TrackLibrary.GetTrackListSize() << "." << std::endl;
+                break;
+            }
             
         case ELibraryMenuOption::Back:
             bWantBackFromLibraryMenu = true;
@@ -635,6 +648,8 @@ bool MEngine::TryNextOption()
 
 bool MEngine::TryPlayNextTrackOrFirst() 
 {
+    std::lock_guard<std::mutex> Lock(EngineMutex);
+    
     std::filesystem::path Path = TrackLibrary.GetNextTrackPath();
     if (Path.empty() && !TrackLibrary.IsEmpty()) 
     {
@@ -663,6 +678,8 @@ bool MEngine::TryPlayNextTrackOrFirst()
 
 bool MEngine::TryPlayRandomTrack() 
 {
+    std::lock_guard<std::mutex> Lock(EngineMutex);
+    
     if (TrackLibrary.IsEmpty()) 
     {
         std::cout << "[TAP::ERROR] Track library is empty." << std::endl;
@@ -743,12 +760,24 @@ void MEngine::RefreshTrackLibrary(const std::filesystem::path &InPath)
 
 void MEngine::SelectTrackByIndex() 
 {
-    if (TrackLibrary.IsEmpty()) return;
+    int TrackLibrarySize = 0;
+    {
+        std::lock_guard<std::mutex> Lock(EngineMutex);
+        
+        if (TrackLibrary.IsEmpty()) return;
+        
+        TrackLibrarySize = TrackLibrary.GetTrackListSize() - 1;
+    }
     
-    int TrackLibrarySize = TrackLibrary.GetTrackListSize() - 1;
     int TrackIndex = ReadIntInRange(0, TrackLibrarySize, "Enter index: ");
     
     std::lock_guard<std::mutex> Lock(EngineMutex);
+    
+    if (TrackIndex >= TrackLibrary.GetTrackListSize())
+    {
+        std::cout << "[TAP::ERROR] Track index is no longer valid." << std::endl;
+        return;
+    }
     
     if (bForcePlayAfterSwitch) 
     {
