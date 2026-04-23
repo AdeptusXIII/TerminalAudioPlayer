@@ -10,7 +10,7 @@ MEngine::MEngine()
 {
     AudioPlayerState = EAudioPlayerState::Idle;
     CurrentMenuSection = EMenuSection::MainMenu;
-    bForceStartAfterSwitch = true;
+    bForcePlayAfterSwitch = true;
     bWantExit = false;
     bWantBackFromLibrary = false;
     bPrintDebugInfo = false;
@@ -51,7 +51,7 @@ void MEngine::RunMainLoop()
     }
 }
 
-void MEngine::PrintMenuOptAndState()
+void MEngine::PrintMainMenuAndState()
 {
     PrintAudioPlayerState();
     PrintCurrentTrack();
@@ -67,7 +67,7 @@ void MEngine::PrintMenuOptAndState()
     std::cout << SUBCAT_SEP_TAB << SUBCAT_SEP_L << "[Opt: 0] - Exit" << std::endl;
 }
 
-void MEngine::PrintLibraryOptAndState() 
+void MEngine::PrintLibraryMenuAndState() 
 {
     PrintAudioPlayerState();
     PrintCurrentTrack();
@@ -121,6 +121,7 @@ void MEngine::PrintAudioPlayerState()
 
 void MEngine::PrintTrackList() 
 {
+    std::cout << std::endl;
     PrintMenuSection();
     std::cout << "Total tracks found: " << TrackLibrary.GetTrackListSize() << std::endl;
     std::string CurrentTrack = {};
@@ -169,7 +170,7 @@ void MEngine::PrintMenuSection()
 
 EMainMenuOption MEngine::ShowMainMenuAndGetOption()
 {
-    PrintMenuOptAndState();
+    PrintMainMenuAndState();
     
     int Option = ReadIntInRange(0, MAX_MAIN_MENU_OPTION_COUNT, "[TAP::MENU] Enter opt: ");
     
@@ -183,7 +184,7 @@ void MEngine::SelectTrackByIndex()
     int TrackLibrarySize = TrackLibrary.GetTrackListSize() - 1;
     int TrackIndex = ReadIntInRange(0, TrackLibrarySize, "Enter index: ");
     
-    if (bForceStartAfterSwitch) 
+    if (bForcePlayAfterSwitch) 
     {
         std::filesystem::path Path = TrackLibrary.GetTrackPathByIndex(TrackIndex);
         if (Path.empty())
@@ -244,7 +245,7 @@ int MEngine::ReadIntInRange(int Min, int Max, const std::string& Prompt)
 
 ELibraryMenuOption MEngine::ShowLibraryMenuAndGetOption() 
 {
-    PrintLibraryOptAndState();
+    PrintLibraryMenuAndState();
     
     int Option = ReadIntInRange(0, MAX_LIBRARY_MENU_OPTION_COUNT, "[TAP::LIBRARY] Enter opt: ");
     
@@ -366,6 +367,8 @@ void MEngine::HandleLibraryMenuOption(ELibraryMenuOption InOption)
             
         case ELibraryMenuOption::Refresh:
             RefreshTrackLibrary(DefaultContentDir);
+            std::cout << "[TAP::LIBRARY] Library refreshed. Total tracks found: "
+                      << TrackLibrary.GetTrackListSize() << "." << std::endl;
             break;
             
         case ELibraryMenuOption::Back:
@@ -389,7 +392,7 @@ bool MEngine::TryExitOption()
 bool MEngine::TryPrevOption() 
 {   
     std::filesystem::path Path = TrackLibrary.GetPrevTrackPath();
-    if (bForceStartAfterSwitch && !TrackLibrary.IsEmpty() && !Path.empty())
+    if (bForcePlayAfterSwitch && !TrackLibrary.IsEmpty() && !Path.empty())
     {
         if (AudioBackend.PlayTrack(Path)) 
         {
@@ -407,7 +410,7 @@ bool MEngine::TryPrevOption()
         }
     }
     
-    if (!bForceStartAfterSwitch && !TrackLibrary.IsEmpty() && !Path.empty()) 
+    if (!bForcePlayAfterSwitch && !TrackLibrary.IsEmpty() && !Path.empty()) 
     {
         SetAudioPlayerState(EAudioPlayerState::Idle);
         AudioBackend.StopTrack();
@@ -484,7 +487,7 @@ bool MEngine::TryStopOption()
 bool MEngine::TryNextOption() 
 {
     std::filesystem::path Path = TrackLibrary.GetNextTrackPath();
-    if (bForceStartAfterSwitch && !TrackLibrary.IsEmpty() && !Path.empty())
+    if (bForcePlayAfterSwitch && !TrackLibrary.IsEmpty() && !Path.empty())
     {
         if (AudioBackend.PlayTrack(Path)) 
         {
@@ -502,7 +505,7 @@ bool MEngine::TryNextOption()
         }
     }
     
-    if (!bForceStartAfterSwitch && !TrackLibrary.IsEmpty() && !Path.empty()) 
+    if (!bForcePlayAfterSwitch && !TrackLibrary.IsEmpty() && !Path.empty()) 
     {
         SetAudioPlayerState(EAudioPlayerState::Idle);
         AudioBackend.StopTrack();

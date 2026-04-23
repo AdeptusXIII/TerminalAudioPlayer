@@ -26,8 +26,8 @@ public:
     void RunMainLoop();
 
 private:
-    void PrintMenuOptAndState();
-    void PrintLibraryOptAndState();
+    void PrintMainMenuAndState();
+    void PrintLibraryMenuAndState();
     void PrintAudioPlayerState();
     void PrintTrackList();
     void PrintCurrentTrack();
@@ -57,7 +57,7 @@ private:
     
     EAudioPlayerState AudioPlayerState;
     EMenuSection CurrentMenuSection;
-    bool bForceStartAfterSwitch;
+    bool bForcePlayAfterSwitch;
     bool bWantExit;
     bool bWantBackFromLibrary;
     bool bPrintDebugInfo;
