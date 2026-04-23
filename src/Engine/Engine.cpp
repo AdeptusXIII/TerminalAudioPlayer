@@ -23,7 +23,7 @@ MEngine::MEngine()
 
 void MEngine::Init()
 {
-    std::string VersionNumber = "0.9";
+    std::string VersionNumber = "0.10";
     std::cout << "TAP - Terminal Audio Player V." << VersionNumber << std::endl;
     
     FileManager.Init(bPrintDebugInfo);   
@@ -131,50 +131,38 @@ void MEngine::PrintPlaybackModeMenuAndState()
 
 void MEngine::PrintAudioPlayerState()
 {
+    EAudioPlayerState CurrentAudioPlayerState = EAudioPlayerState::None;
     std::lock_guard<std::mutex> Lock(EngineMutex);
+    {
+        CurrentAudioPlayerState = AudioPlayerState;
+    }
     
-    switch (AudioPlayerState)
+    switch (CurrentAudioPlayerState)
     {
         case EAudioPlayerState::Idle:
-            if (bPrintDebugInfo) 
-            {
-                std::cout << std::endl << "[AudioPlayerState]::Idle" << std::endl;
-            }
-            else 
-            {
-                std::cout << std::endl << "[TAP::STATE::IDLE]" << std::endl;
-            }
+            std::cout << std::endl << "[TAP::STATE::IDLE]" << std::endl;
             break;
 
         case EAudioPlayerState::Playing:
-            if (bPrintDebugInfo) 
-            {
-                std::cout << std::endl << "[AudioPlayerState]::Playing" << std::endl;
-            }
-            else 
-            {
-                std::cout << std::endl <<  "[TAP::STATE::PLAYING]" << std::endl;
-            }
+            std::cout << std::endl <<  "[TAP::STATE::PLAYING]" << std::endl;
             break;
 
         case EAudioPlayerState::Paused:
             if (bPrintDebugInfo) 
-            {
-                std::cout << std::endl << "[AudioPlayerState]::Paused" << std::endl;
-            }
-            else 
-            {
                 std::cout << std::endl << "[TAP::STATE::PAUSED]" << std::endl;
-            }
             break;
     }
 }
 
 void MEngine::PrintPlaybackMode() 
 {
+    EPlaybackMode CurrentPlaybackMode = EPlaybackMode::None;
     std::lock_guard<std::mutex> Lock(EngineMutex);
+    {
+        CurrentPlaybackMode = PlaybackMode;
+    }
     
-    switch (PlaybackMode) 
+    switch (CurrentPlaybackMode) 
     {
         case EPlaybackMode::Once:
             if (bPrintDebugInfo) 
@@ -222,39 +210,50 @@ void MEngine::PrintPlaybackMode()
     }
 }
 
-void MEngine::PrintTrackList() 
+void MEngine::PrintTrackList()
 {
-    std::lock_guard<std::mutex> Lock(EngineMutex);
-    
+    int TrackCount = 0;
+    int CurrentIndex = 0;
+    std::vector<std::string> TrackNames;
+
+    {
+        std::lock_guard<std::mutex> Lock(EngineMutex);
+
+        TrackCount = TrackLibrary.GetTrackListSize();
+        CurrentIndex = TrackLibrary.GetCurrentIndex();
+
+        for (int i = 0; i < TrackCount; i++)
+        {
+            TrackNames.push_back(TrackLibrary.GetTrackNameByIndex(i));
+        }
+    }
+
     std::cout << std::endl;
     PrintMenuSection();
-    std::cout << "Total tracks found: " << TrackLibrary.GetTrackListSize() << std::endl;
-    std::string CurrentTrack = {};
-    std::string SubCatTorL = {};
-    
-    if (!TrackLibrary.IsEmpty())
+    std::cout << "Total tracks found: " << TrackCount << std::endl;
+
+    for (int i = 0; i < TrackCount; i++)
     {
-        for (int i = 0; i < TrackLibrary.GetTrackListSize(); i++)
-        {
-            if (i == TrackLibrary.GetCurrentIndex())
-                CurrentTrack = " <- current/selected";
-            else
-                CurrentTrack = {};
-            if ( i == TrackLibrary.GetTrackListSize() - 1)
-                SubCatTorL = SUBCAT_SEP_L;
-            else
-                SubCatTorL = SUBCAT_SEP_T;
-            std::cout << SUBCAT_SEP_TAB + SubCatTorL << "Index(" << i << ")" << "[" << TrackLibrary.GetTrackNameByIndex(i) << "] " << CurrentTrack 
-                << std::endl;
-        }
+        std::string CurrentTrack = (i == CurrentIndex) ? " <- current/selected" : "";
+        std::string SubCatTorL = (i == TrackCount - 1) ? SUBCAT_SEP_L : SUBCAT_SEP_T;
+
+        std::cout << SUBCAT_SEP_TAB + SubCatTorL 
+                  << "Index(" << i << ")" 
+                  << "[" << TrackNames[i] 
+                  << "] "
+                  << CurrentTrack
+                  << std::endl;
     }
 }
 
 void MEngine::PrintCurrentTrack() 
 {
+    std::string CurrentTrackName = "None";
     std::lock_guard<std::mutex> Lock(EngineMutex);
+    {
+        CurrentTrackName = TrackLibrary.GetCurrentTrackName();
+    }
     
-    std::string CurrentTrackName = TrackLibrary.GetCurrentTrackName();
     std::cout << "[TAP::SELECTED TRACK:: " << CurrentTrackName << "]" << std::endl;
 }
 
@@ -342,73 +341,35 @@ void MEngine::HandleMainMenuOption(EMainMenuOption InOption)
     switch (InOption)
     {
         case EMainMenuOption::Prev:
-            if (TryPrevOption()) 
-            {
-                if (bPrintDebugInfo) 
-                {
-                    std::cout << std::endl << "[ENGINE] Previous Track Selected: " << TrackLibrary.GetCurrentTrackName() 
-                        << std::endl;
-                }
-            }
-            else 
+            if (!TryPrevOption()) 
             {
                 std::cout << std::endl << "[TAP::WARNING] No previous track." << std::endl;
             }
             break;
 
         case EMainMenuOption::Play:
-            if (TryPlayOption())
-            {
-                if (bPrintDebugInfo) 
-                {
-                    std::cout << std::endl << "[ENGINE] Track Playing: " << TrackLibrary.GetCurrentTrackName() 
-                        << std::endl;
-                }
-            }
-            else
+            if (!TryPlayOption())
             {
                 std::cout << std::endl << "[TAP::WARNING] Track is already playing or not selected." << std::endl;
             }
             break;
 
         case EMainMenuOption::Pause:
-            if (TryPauseOption())
-            {
-                if (bPrintDebugInfo) 
-                {
-                    std::cout << std::endl << "[ENGINE] Track Paused" << std::endl;
-                }
-            }
-            else
+            if (!TryPauseOption())
             {
                 std::cout << std::endl << "[TAP::WARNING] Track is already paused or not playing." << std::endl;
             }
             break;
 
         case EMainMenuOption::Stop:
-            if (TryStopOption())
-            {
-                if (bPrintDebugInfo) 
-                {
-                    std::cout << std::endl << "[ENGINE] Track Stopped." << std::endl;
-                }
-            }
-            else
+            if (!TryStopOption())
             {
                 std::cout << std::endl << "[TAP::WARNING] Track is already stopped." << std::endl;
             }
             break;
 
         case EMainMenuOption::Next:
-            if (TryNextOption()) 
-            {
-                if (bPrintDebugInfo) 
-                {
-                    std::cout << std::endl << "[ENGINE] Next Track Selected: " << TrackLibrary.GetCurrentTrackName() 
-                        << std::endl;
-                }
-            }
-            else 
+            if (!TryNextOption()) 
             {
                 std::cout << std::endl << "[TAP::WARNING] No next track." << std::endl;
             }
@@ -426,7 +387,6 @@ void MEngine::HandleMainMenuOption(EMainMenuOption InOption)
             if (TryExitOption()) 
             {
                 std::cout << std::endl << "[TAP::SHUTDOWN] Exit." << std::endl;
-                SetAudioPlayerState(EAudioPlayerState::Idle);
             }
             else 
             {
@@ -746,6 +706,8 @@ void MEngine::WriteTrackListToTrackLibrary(const std::filesystem::path &InPath)
 
 void MEngine::RefreshTrackLibrary(const std::filesystem::path &InPath)
 {
+    std::vector<std::filesystem::path> ScannedPath = AudioFileScanner.ScanPath(InPath);
+    
     std::lock_guard<std::mutex> Lock(EngineMutex);
     
     if (AudioPlayerState == EAudioPlayerState::Playing || AudioPlayerState == EAudioPlayerState::Paused) 
@@ -755,7 +717,7 @@ void MEngine::RefreshTrackLibrary(const std::filesystem::path &InPath)
     }
     
     TrackLibrary.Clear();
-    WriteTrackListToTrackLibrary(InPath);
+    TrackLibrary.AddTracksToTrackList(ScannedPath);
 }
 
 void MEngine::SelectTrackByIndex() 

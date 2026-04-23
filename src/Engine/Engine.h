@@ -17,6 +17,8 @@ enum class EAudioPlayerState
     Idle,
     Playing,
     Paused,
+    
+    None
 };
 
 enum class EPlaybackMode 
@@ -24,7 +26,9 @@ enum class EPlaybackMode
     Once,
     LoopOne,
     LoopAll,
-    LoopShuffle
+    LoopShuffle,
+    
+    None
 };
 
 class MEngine 

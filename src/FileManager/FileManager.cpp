@@ -2,9 +2,7 @@
 
 #include "FileManager.h"
 
-#include <algorithm>
 #include <iostream>
-#include <unordered_set>
 
 MFileManager::MFileManager()
 {
