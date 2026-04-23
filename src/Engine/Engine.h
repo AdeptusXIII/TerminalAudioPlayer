@@ -16,6 +16,14 @@ enum class EAudioPlayerState
     Paused,
 };
 
+enum class EPlaybackMode 
+{
+    Once,
+    LoopOne,
+    LoopAll,
+    LoopShuffle
+};
+
 class MEngine 
 {
 public:
@@ -28,19 +36,24 @@ public:
 private:
     void PrintMainMenuAndState();
     void PrintLibraryMenuAndState();
+    void PrintPlaybackModeMenuAndState();
     void PrintAudioPlayerState();
+    void PrintPlaybackMode();
     void PrintTrackList();
     void PrintCurrentTrack();
     void PrintMenuSection();
     
     EMainMenuOption ShowMainMenuAndGetOption();
-    void SelectTrackByIndex();
-    int ReadIntInRange(int Min, int Max, const std::string& Prompt);
     ELibraryMenuOption ShowLibraryMenuAndGetOption();
+    EPlaybackMenuOption ShowPlaybackModeMenuAndGetOption();
+    
+    void OpenMenuLibrary();
+    void OpenMenuPlaybackMode();
     
     void SetAudioPlayerState(EAudioPlayerState TargetAudioPlayerState);
     void HandleMainMenuOption(EMainMenuOption InOption);
     void HandleLibraryMenuOption(ELibraryMenuOption InOption);
+    void HandlePlaybackModeMenuOption(EPlaybackMenuOption InOption);
     
     bool TryExitOption();
     bool TryPrevOption();
@@ -49,17 +62,19 @@ private:
     bool TryStopOption();
     bool TryNextOption();
     
-    void OpenLibrary();
-    
     bool CreateDefaultContentDir();
     void WriteTrackListToTrackLibrary(const std::filesystem::path &InPath);
     void RefreshTrackLibrary(const std::filesystem::path &InPath);
+    void SelectTrackByIndex();
+    int ReadIntInRange(int Min, int Max, const std::string& Prompt);
     
     EAudioPlayerState AudioPlayerState;
+    EPlaybackMode PlaybackMode;
     EMenuSection CurrentMenuSection;
     bool bForcePlayAfterSwitch;
     bool bWantExit;
-    bool bWantBackFromLibrary;
+    bool bWantBackFromLibraryMenu;
+    bool bWantBackFromPlaybackMenu;
     bool bPrintDebugInfo;
     std::string DefaultContentDir;
     MAudioBackend AudioBackend;

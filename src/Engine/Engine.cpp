@@ -9,10 +9,12 @@ MEngine::MEngine()
     
 {
     AudioPlayerState = EAudioPlayerState::Idle;
+    PlaybackMode = EPlaybackMode::Once;
     CurrentMenuSection = EMenuSection::MainMenu;
     bForcePlayAfterSwitch = true;
     bWantExit = false;
-    bWantBackFromLibrary = false;
+    bWantBackFromLibraryMenu = false;
+    bWantBackFromPlaybackMenu = false;
     bPrintDebugInfo = false;
     DefaultContentDir = std::getenv("HOME") + std::string("/Music/TAP_content");
 }
@@ -54,30 +56,48 @@ void MEngine::RunMainLoop()
 void MEngine::PrintMainMenuAndState()
 {
     PrintAudioPlayerState();
+    PrintPlaybackMode();
     PrintCurrentTrack();
     PrintMenuSection();
     
     std::cout << "Choose option: " << std::endl;
-    std::cout << SUBCAT_SEP_TAB << SUBCAT_SEP_T << "[Opt: 1] - Prev" << std::endl;
-    std::cout << SUBCAT_SEP_TAB << SUBCAT_SEP_T << "[Opt: 2] - Play" << std::endl;
-    std::cout << SUBCAT_SEP_TAB << SUBCAT_SEP_T << "[Opt: 3] - Pause" << std::endl;
-    std::cout << SUBCAT_SEP_TAB << SUBCAT_SEP_T << "[Opt: 4] - Stop" << std::endl;
-    std::cout << SUBCAT_SEP_TAB << SUBCAT_SEP_T << "[Opt: 5] - Next" << std::endl;
-    std::cout << SUBCAT_SEP_TAB << SUBCAT_SEP_T << "[Opt: 6] - Library" << std::endl;
-    std::cout << SUBCAT_SEP_TAB << SUBCAT_SEP_L << "[Opt: 0] - Exit" << std::endl;
+    std::cout << SUBCAT_SEP_TAB << SUBCAT_SEP_T << "(1) - [ Prev ]" << std::endl;
+    std::cout << SUBCAT_SEP_TAB << SUBCAT_SEP_T << "(2) - [ Play ]" << std::endl;
+    std::cout << SUBCAT_SEP_TAB << SUBCAT_SEP_T << "(3) - [ Pause ]" << std::endl;
+    std::cout << SUBCAT_SEP_TAB << SUBCAT_SEP_T << "(4) - [ Stop ]" << std::endl;
+    std::cout << SUBCAT_SEP_TAB << SUBCAT_SEP_T << "(5) - [ Next ]" << std::endl;
+    std::cout << SUBCAT_SEP_TAB << SUBCAT_SEP_T << "(6) - [ Library ]" << std::endl;
+    std::cout << SUBCAT_SEP_TAB << SUBCAT_SEP_T << "(7) - [ Playback-Mode ]" << std::endl;
+    std::cout << SUBCAT_SEP_TAB << SUBCAT_SEP_L << "(0) - [ Exit ]" << std::endl;
 }
 
 void MEngine::PrintLibraryMenuAndState() 
 {
     PrintAudioPlayerState();
+    PrintPlaybackMode();
     PrintCurrentTrack();
     PrintMenuSection();
     
     std::cout << "Choose option: " << std::endl;
-    std::cout << SUBCAT_SEP_TAB << SUBCAT_SEP_T << "[Opt: 1] - List" << std::endl;
-    std::cout << SUBCAT_SEP_TAB << SUBCAT_SEP_T << "[Opt: 2] - Select track by index" << std::endl;
-    std::cout << SUBCAT_SEP_TAB << SUBCAT_SEP_T << "[Opt: 3] - Refresh" << std::endl;
-    std::cout << SUBCAT_SEP_TAB << SUBCAT_SEP_L << "[Opt: 0] - Back" << std::endl;
+    std::cout << SUBCAT_SEP_TAB << SUBCAT_SEP_T << "(1) - [ List ]" << std::endl;
+    std::cout << SUBCAT_SEP_TAB << SUBCAT_SEP_T << "(2) - [ Select track by index ]" << std::endl;
+    std::cout << SUBCAT_SEP_TAB << SUBCAT_SEP_T << "(3) - [ Refresh ]" << std::endl;
+    std::cout << SUBCAT_SEP_TAB << SUBCAT_SEP_L << "(0) - [ Back ]" << std::endl;
+}
+
+void MEngine::PrintPlaybackModeMenuAndState() 
+{
+    PrintAudioPlayerState();
+    PrintPlaybackMode();
+    PrintCurrentTrack();
+    PrintMenuSection();
+    
+    std::cout << "Choose option: " << std::endl;
+    std::cout << SUBCAT_SEP_TAB << SUBCAT_SEP_T << "(1) - [ Once ]" << std::endl;
+    std::cout << SUBCAT_SEP_TAB << SUBCAT_SEP_T << "(2) - [ Loop One ]" << std::endl;
+    std::cout << SUBCAT_SEP_TAB << SUBCAT_SEP_T << "(3) - [ Loop All ]" << std::endl;
+    std::cout << SUBCAT_SEP_TAB << SUBCAT_SEP_T << "(4) - [ Loop Shuffle ]" << std::endl;
+    std::cout << SUBCAT_SEP_TAB << SUBCAT_SEP_L << "(0) - [ Back ]" << std::endl;
 }
 
 void MEngine::PrintAudioPlayerState()
@@ -116,6 +136,56 @@ void MEngine::PrintAudioPlayerState()
                 std::cout << std::endl << "[TAP::STATE::PAUSED]" << std::endl;
             }
             break;
+    }
+}
+
+void MEngine::PrintPlaybackMode() 
+{
+    switch (PlaybackMode) 
+    {
+        case EPlaybackMode::Once:
+            if (bPrintDebugInfo) 
+            {
+                std::cout << "[PlaybackMode]::Once" << std::endl;
+            }
+            else 
+            {
+                std::cout << "[TAP::PLAYBACK-MODE::ONCE]" << std::endl;
+            }
+            break;
+            
+        case EPlaybackMode::LoopOne:
+            if (bPrintDebugInfo) 
+            {
+                std::cout << "[PlaybackMode]::LoopOne" << std::endl;
+            }
+            else 
+            {
+                std::cout << "[TAP::PLAYBACK-MODE::LOOP-ONE]" << std::endl;
+            }
+            break;
+            
+        case EPlaybackMode::LoopAll:
+            if (bPrintDebugInfo) 
+            {
+                std::cout << "[PlaybackMode]::LoopAll" << std::endl;
+            }
+            else 
+            {
+                std::cout<< "[TAP::PLAYBACK-MODE::LOOP-ALL]" << std::endl;
+            }
+            break;   
+            
+        case EPlaybackMode::LoopShuffle:
+            if (bPrintDebugInfo) 
+            {
+                std::cout << "[PlaybackMode]::LoopShuffle" << std::endl;
+            }
+            else 
+            {
+                std::cout << "[TAP::PLAYBACK-MODE::LOOP-SHUFFLE]" << std::endl;
+            }
+            break;        
     }
 }
 
@@ -162,6 +232,10 @@ void MEngine::PrintMenuSection()
             
         case EMenuSection::LibraryMenu:
             MenuSection = "LIBRARY";
+            break;
+            
+        case EMenuSection::PlaybackMenu:
+            MenuSection = "PLAYBACK-MODE";
             break;    
     }
     
@@ -177,72 +251,6 @@ EMainMenuOption MEngine::ShowMainMenuAndGetOption()
     return static_cast<EMainMenuOption>(Option);
 }
 
-void MEngine::SelectTrackByIndex() 
-{
-    if (TrackLibrary.IsEmpty()) return;
-    
-    int TrackLibrarySize = TrackLibrary.GetTrackListSize() - 1;
-    int TrackIndex = ReadIntInRange(0, TrackLibrarySize, "Enter index: ");
-    
-    if (bForcePlayAfterSwitch) 
-    {
-        std::filesystem::path Path = TrackLibrary.GetTrackPathByIndex(TrackIndex);
-        if (Path.empty())
-        {
-            std::cout << "[TAP::ERROR] Track path is empty." << std::endl;
-            return;
-        }
-
-        if (AudioBackend.PlayTrack(Path))
-        {
-            SetAudioPlayerState(EAudioPlayerState::Playing);
-            if (!TrackLibrary.SetCurrentIndex(TrackIndex))
-            {
-                std::cout << "[TAP::ERROR] Failed to set current track index." << std::endl;
-                return;
-            }
-            return;
-        }
-
-        std::cout << "[TAP::ERROR] Error while trying to play file: " << Path.string() <<
-        std::endl;
-    }
-    else 
-    {
-        SetAudioPlayerState(EAudioPlayerState::Idle);
-        AudioBackend.StopTrack();
-        
-        if (!TrackLibrary.SetCurrentIndex(TrackIndex)) 
-        {
-            std::cout << "[TAP::ERROR] Failed to set current track index." << std::endl;
-        }
-    }
-}
-
-int MEngine::ReadIntInRange(int Min, int Max, const std::string& Prompt)
-{
-    int Value = -1;
-    
-    while (true)
-    {
-        std::cout << Prompt;
-        std::cin >> Value;
-        
-        bool bInputValid = !std::cin.fail();
-        bool bInputInRange = bInputValid && !(Value < Min || Value > Max);
-        
-        if (bInputInRange) 
-        {
-            return Value;
-        }
-        
-        std::cin.clear();
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cout << std::endl << "[TAP::ERROR] Input must be an integer between " << Min << " and " << Max << "." 
-            << std::endl;
-    }
-}
-
 ELibraryMenuOption MEngine::ShowLibraryMenuAndGetOption() 
 {
     PrintLibraryMenuAndState();
@@ -250,6 +258,45 @@ ELibraryMenuOption MEngine::ShowLibraryMenuAndGetOption()
     int Option = ReadIntInRange(0, MAX_LIBRARY_MENU_OPTION_COUNT, "[TAP::LIBRARY] Enter opt: ");
     
     return static_cast<ELibraryMenuOption>(Option);
+}
+
+EPlaybackMenuOption MEngine::ShowPlaybackModeMenuAndGetOption() 
+{
+    PrintPlaybackModeMenuAndState();
+    
+    int Option = ReadIntInRange(0, MAX_PLAYBACK_MENU_OPTION_COUNT, "[TAP::PLAYBACK-MODE] Enter opt: ");
+    
+    return static_cast<EPlaybackMenuOption>(Option);
+}
+
+void MEngine::OpenMenuLibrary() 
+{
+    CurrentMenuSection = EMenuSection::LibraryMenu;
+    while (!bWantBackFromLibraryMenu) 
+    {
+        ELibraryMenuOption Option = ELibraryMenuOption::None;
+    
+        Option = ShowLibraryMenuAndGetOption();
+    
+        HandleLibraryMenuOption(Option);
+    }
+    bWantBackFromLibraryMenu = false;
+    CurrentMenuSection = EMenuSection::MainMenu;
+}
+
+void MEngine::OpenMenuPlaybackMode() 
+{
+    CurrentMenuSection = EMenuSection::PlaybackMenu;
+    while (!bWantBackFromPlaybackMenu) 
+    {
+        EPlaybackMenuOption Option = EPlaybackMenuOption::None;
+        
+        Option = ShowPlaybackModeMenuAndGetOption();
+        
+        HandlePlaybackModeMenuOption(Option);
+    }
+    bWantBackFromPlaybackMenu = false;
+    CurrentMenuSection = EMenuSection::MainMenu;
 }
 
 void MEngine::SetAudioPlayerState(EAudioPlayerState TargetAudioPlayerState)
@@ -335,8 +382,12 @@ void MEngine::HandleMainMenuOption(EMainMenuOption InOption)
             break;
         
         case EMainMenuOption::Library:
-            OpenLibrary();
+            OpenMenuLibrary();
             break;
+            
+        case EMainMenuOption::PlaybackMode:
+            OpenMenuPlaybackMode();
+            break;    
             
         case EMainMenuOption::Exit:
             if (TryExitOption()) 
@@ -372,8 +423,34 @@ void MEngine::HandleLibraryMenuOption(ELibraryMenuOption InOption)
             break;
             
         case ELibraryMenuOption::Back:
-            bWantBackFromLibrary = true;
+            bWantBackFromLibraryMenu = true;
             break;
+    }
+}
+
+void MEngine::HandlePlaybackModeMenuOption(EPlaybackMenuOption InOption) 
+{
+    switch (InOption) 
+    {
+        case EPlaybackMenuOption::Once:
+            AudioBackend.SetLoop(false);
+            PlaybackMode = EPlaybackMode::Once;
+            break;
+            
+        case EPlaybackMenuOption::LoopOne:
+            AudioBackend.SetLoop(true);
+            PlaybackMode = EPlaybackMode::LoopOne;
+            break;
+            
+        case EPlaybackMenuOption::LoopAll:
+            break;
+            
+        case EPlaybackMenuOption::LoopShuffle:
+            break;
+            
+        case EPlaybackMenuOption::Back:
+            bWantBackFromPlaybackMenu = true;
+            break;    
     }
 }
 
@@ -516,21 +593,6 @@ bool MEngine::TryNextOption()
     return false;
 }
 
-void MEngine::OpenLibrary() 
-{
-    CurrentMenuSection = EMenuSection::LibraryMenu;
-    while (!bWantBackFromLibrary) 
-    {
-        ELibraryMenuOption Option = ELibraryMenuOption::None;
-    
-        Option = ShowLibraryMenuAndGetOption();
-    
-        HandleLibraryMenuOption(Option);
-    }
-    bWantBackFromLibrary = false;
-    CurrentMenuSection = EMenuSection::MainMenu;
-}
-
 bool MEngine::CreateDefaultContentDir() 
 {
     bool bCreated = false;
@@ -562,4 +624,70 @@ void MEngine::RefreshTrackLibrary(const std::filesystem::path &InPath)
     
     TrackLibrary.Clear();
     WriteTrackListToTrackLibrary(InPath);
+}
+
+void MEngine::SelectTrackByIndex() 
+{
+    if (TrackLibrary.IsEmpty()) return;
+    
+    int TrackLibrarySize = TrackLibrary.GetTrackListSize() - 1;
+    int TrackIndex = ReadIntInRange(0, TrackLibrarySize, "Enter index: ");
+    
+    if (bForcePlayAfterSwitch) 
+    {
+        std::filesystem::path Path = TrackLibrary.GetTrackPathByIndex(TrackIndex);
+        if (Path.empty())
+        {
+            std::cout << "[TAP::ERROR] Track path is empty." << std::endl;
+            return;
+        }
+
+        if (AudioBackend.PlayTrack(Path))
+        {
+            SetAudioPlayerState(EAudioPlayerState::Playing);
+            if (!TrackLibrary.SetCurrentIndex(TrackIndex))
+            {
+                std::cout << "[TAP::ERROR] Failed to set current track index." << std::endl;
+                return;
+            }
+            return;
+        }
+
+        std::cout << "[TAP::ERROR] Error while trying to play file: " << Path.string() <<
+        std::endl;
+    }
+    else 
+    {
+        SetAudioPlayerState(EAudioPlayerState::Idle);
+        AudioBackend.StopTrack();
+        
+        if (!TrackLibrary.SetCurrentIndex(TrackIndex)) 
+        {
+            std::cout << "[TAP::ERROR] Failed to set current track index." << std::endl;
+        }
+    }
+}
+
+int MEngine::ReadIntInRange(int Min, int Max, const std::string& Prompt)
+{
+    int Value = -1;
+    
+    while (true)
+    {
+        std::cout << Prompt;
+        std::cin >> Value;
+        
+        bool bInputValid = !std::cin.fail();
+        bool bInputInRange = bInputValid && !(Value < Min || Value > Max);
+        
+        if (bInputInRange) 
+        {
+            return Value;
+        }
+        
+        std::cin.clear();
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        std::cout << std::endl << "[TAP::ERROR] Input must be an integer between " << Min << " and " << Max << "." 
+            << std::endl;
+    }
 }

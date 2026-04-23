@@ -17,6 +17,9 @@ public:
     bool StopTrack();
     
     bool IsStopped() const;
+    
+    void SetLoop(bool bLoop);
+    
     bool ShutDown();
     
     

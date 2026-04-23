@@ -101,6 +101,11 @@ bool MAudioBackend::IsStopped() const
     return Sound.getStatus() == sf::Sound::Status::Stopped;
 }
 
+void MAudioBackend::SetLoop(bool bLoop) 
+{
+    Sound.setLoop(bLoop);
+}
+
 bool MAudioBackend::ShutDown() 
 {
     Sound.stop();

@@ -3,8 +3,9 @@
 
 #include <string>
 
-const int MAX_MAIN_MENU_OPTION_COUNT = 6;
+const int MAX_MAIN_MENU_OPTION_COUNT = 7;
 const int MAX_LIBRARY_MENU_OPTION_COUNT = 3;
+const int MAX_PLAYBACK_MENU_OPTION_COUNT = 4;
 
 /** SubCategory Separator Type T: "├──" */
 const std::string SUBCAT_SEP_T = "├──";
@@ -20,10 +21,11 @@ const std::string SUBCAT_SEP_TAB = "  ";
 
 enum class EMenuSection 
 {
-    MainMenu = 0,
-    LibraryMenu = 1,
+    MainMenu,
+    LibraryMenu,
+    PlaybackMenu,
     
-    None = 99
+    None
 };
 
 enum class EMainMenuOption
@@ -35,6 +37,7 @@ enum class EMainMenuOption
     Stop = 4,
     Next = 5,
     Library = 6,
+    PlaybackMode = 7,
     
     None = 99
 };
@@ -45,6 +48,17 @@ enum class ELibraryMenuOption
     List = 1,
     SelectByIndex = 2,
     Refresh = 3,
+    
+    None = 99
+};
+
+enum class EPlaybackMenuOption 
+{
+    Back = 0,
+    Once = 1,
+    LoopOne = 2,
+    LoopAll = 3,
+    LoopShuffle = 4,
     
     None = 99
 };
