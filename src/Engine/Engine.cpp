@@ -4,6 +4,8 @@
 #include <iostream>
 #include <limits>
 #include <filesystem>
+#include <time.h>
+#include <stdlib.h>
 
 MEngine::MEngine()
     
@@ -35,6 +37,22 @@ void MEngine::SyncAudioState()
 {
     if (AudioPlayerState == EAudioPlayerState::Playing && AudioBackend.IsStopped()) 
     {
+        if (PlaybackMode == EPlaybackMode::LoopAll) 
+        {
+            if (TryPlayNextTrackOrFirst()) 
+            {
+                return;
+            }
+        }
+        
+        if (PlaybackMode == EPlaybackMode::LoopShuffle) 
+        {
+            if (TryPlayRandomTrack()) 
+            {
+                return;
+            }
+        }
+        
         SetAudioPlayerState(EAudioPlayerState::Idle);
     }
 }
@@ -274,10 +292,9 @@ void MEngine::OpenMenuLibrary()
     CurrentMenuSection = EMenuSection::LibraryMenu;
     while (!bWantBackFromLibraryMenu) 
     {
+        SyncAudioState();
         ELibraryMenuOption Option = ELibraryMenuOption::None;
-    
         Option = ShowLibraryMenuAndGetOption();
-    
         HandleLibraryMenuOption(Option);
     }
     bWantBackFromLibraryMenu = false;
@@ -289,10 +306,9 @@ void MEngine::OpenMenuPlaybackMode()
     CurrentMenuSection = EMenuSection::PlaybackMenu;
     while (!bWantBackFromPlaybackMenu) 
     {
+        SyncAudioState();
         EPlaybackMenuOption Option = EPlaybackMenuOption::None;
-        
         Option = ShowPlaybackModeMenuAndGetOption();
-        
         HandlePlaybackModeMenuOption(Option);
     }
     bWantBackFromPlaybackMenu = false;
@@ -443,9 +459,13 @@ void MEngine::HandlePlaybackModeMenuOption(EPlaybackMenuOption InOption)
             break;
             
         case EPlaybackMenuOption::LoopAll:
+            AudioBackend.SetLoop(false);
+            PlaybackMode = EPlaybackMode::LoopAll;
             break;
             
         case EPlaybackMenuOption::LoopShuffle:
+            AudioBackend.SetLoop(false);
+            PlaybackMode = EPlaybackMode::LoopShuffle;
             break;
             
         case EPlaybackMenuOption::Back:
@@ -590,6 +610,79 @@ bool MEngine::TryNextOption()
         return true;
     }
     
+    return false;
+}
+
+bool MEngine::TryPlayNextTrackOrFirst() 
+{
+    std::filesystem::path Path = TrackLibrary.GetNextTrackPath();
+    if (Path.empty() && !TrackLibrary.IsEmpty()) 
+    {
+        std::filesystem::path FirstTrackPath = TrackLibrary.GetTrackPathByIndex(0);
+        if (!FirstTrackPath.empty() && AudioBackend.PlayTrack(FirstTrackPath))
+        {
+            TrackLibrary.SetCurrentIndex(0);
+            SetAudioPlayerState(EAudioPlayerState::Playing);
+            return true;
+        }
+        
+        std::cout << "[TAP::ERROR] Failed to play first track." << std::endl;
+        return false;
+    }
+    
+    if (AudioBackend.PlayTrack(Path)) 
+    {
+        TrackLibrary.SetNextIndex();
+        SetAudioPlayerState(EAudioPlayerState::Playing);
+        return true;
+    }
+    
+    std::cout << "[TAP::ERROR] Error while trying to play: " << TrackLibrary.GetCurrentTrackName() << std::endl;
+    return false;
+}
+
+bool MEngine::TryPlayRandomTrack() 
+{
+    if (TrackLibrary.IsEmpty()) 
+    {
+        std::cout << "[TAP::ERROR] Track library is empty." << std::endl;
+        return false;
+    }
+    
+    int TrackCount = TrackLibrary.GetTrackListSize();
+    
+    if (TrackCount == 1) 
+    {
+        int OnlyOneIndex = 0;
+        std::filesystem::path Path = TrackLibrary.GetTrackPathByIndex(OnlyOneIndex);
+        
+        if (!Path.empty() && AudioBackend.PlayTrack(Path)) {
+            TrackLibrary.SetCurrentIndex(OnlyOneIndex);
+            SetAudioPlayerState(EAudioPlayerState::Playing);
+            return true;
+        }
+        
+        std::cout << "[TAP::ERROR] Failed play." << std::endl;
+        return false;
+    }
+    
+    
+    int NextIndex = rand() % TrackCount;
+    while (TrackLibrary.GetCurrentIndex() == NextIndex) 
+    {
+        NextIndex = rand() % TrackCount;
+    }
+    
+    std::filesystem::path Path = TrackLibrary.GetTrackPathByIndex(NextIndex);
+    
+    if (AudioBackend.PlayTrack(Path)) 
+    {
+        TrackLibrary.SetCurrentIndex(NextIndex);
+        SetAudioPlayerState(EAudioPlayerState::Playing);
+        return true;
+    }
+    
+    std::cout << "[TAP::ERROR] Error while trying to play: " << TrackLibrary.GetCurrentTrackName() << std::endl;
     return false;
 }
 

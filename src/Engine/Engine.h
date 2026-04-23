@@ -61,6 +61,8 @@ private:
     bool TryPauseOption();
     bool TryStopOption();
     bool TryNextOption();
+    bool TryPlayNextTrackOrFirst();
+    bool TryPlayRandomTrack();
     
     bool CreateDefaultContentDir();
     void WriteTrackListToTrackLibrary(const std::filesystem::path &InPath);
