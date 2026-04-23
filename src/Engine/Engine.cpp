@@ -4,14 +4,13 @@
 #include <iostream>
 #include <limits>
 #include <filesystem>
-#include <time.h>
-#include <stdlib.h>
+#include <chrono>
 
 MEngine::MEngine()
     
 {
     AudioPlayerState = EAudioPlayerState::Idle;
-    PlaybackMode = EPlaybackMode::Once;
+    PlaybackMode = EPlaybackMode::LoopAll;
     CurrentMenuSection = EMenuSection::MainMenu;
     bForcePlayAfterSwitch = true;
     bWantExit = false;
@@ -19,6 +18,7 @@ MEngine::MEngine()
     bWantBackFromPlaybackMenu = false;
     bPrintDebugInfo = false;
     DefaultContentDir = std::getenv("HOME") + std::string("/Music/TAP_content");
+    bAudioSyncThreadRunning = false;
 }
 
 void MEngine::Init()
@@ -35,6 +35,8 @@ void MEngine::Init()
 
 void MEngine::SyncAudioState() 
 {
+    std::lock_guard<std::mutex> Lock(EngineMutex);
+    
     if (AudioPlayerState == EAudioPlayerState::Playing && AudioBackend.IsStopped()) 
     {
         if (PlaybackMode == EPlaybackMode::LoopAll) 
@@ -59,16 +61,14 @@ void MEngine::SyncAudioState()
 
 void MEngine::RunMainLoop() 
 {
+    StartAudioSyncThread();
     while (bWantExit == false)
     {
-        SyncAudioState();
-        
         EMainMenuOption SelectedOption = EMainMenuOption::None;
-        
         SelectedOption = ShowMainMenuAndGetOption();
-
         HandleMainMenuOption(SelectedOption);
     }
+    StopAudioSyncThread();
 }
 
 void MEngine::PrintMainMenuAndState()
@@ -120,6 +120,8 @@ void MEngine::PrintPlaybackModeMenuAndState()
 
 void MEngine::PrintAudioPlayerState()
 {
+    std::lock_guard<std::mutex> Lock(EngineMutex);
+    
     switch (AudioPlayerState)
     {
         case EAudioPlayerState::Idle:
@@ -159,6 +161,8 @@ void MEngine::PrintAudioPlayerState()
 
 void MEngine::PrintPlaybackMode() 
 {
+    std::lock_guard<std::mutex> Lock(EngineMutex);
+    
     switch (PlaybackMode) 
     {
         case EPlaybackMode::Once:
@@ -209,6 +213,8 @@ void MEngine::PrintPlaybackMode()
 
 void MEngine::PrintTrackList() 
 {
+    std::lock_guard<std::mutex> Lock(EngineMutex);
+    
     std::cout << std::endl;
     PrintMenuSection();
     std::cout << "Total tracks found: " << TrackLibrary.GetTrackListSize() << std::endl;
@@ -235,6 +241,8 @@ void MEngine::PrintTrackList()
 
 void MEngine::PrintCurrentTrack() 
 {
+    std::lock_guard<std::mutex> Lock(EngineMutex);
+    
     std::string CurrentTrackName = TrackLibrary.GetCurrentTrackName();
     std::cout << "[TAP::SELECTED TRACK:: " << CurrentTrackName << "]" << std::endl;
 }
@@ -292,7 +300,6 @@ void MEngine::OpenMenuLibrary()
     CurrentMenuSection = EMenuSection::LibraryMenu;
     while (!bWantBackFromLibraryMenu) 
     {
-        SyncAudioState();
         ELibraryMenuOption Option = ELibraryMenuOption::None;
         Option = ShowLibraryMenuAndGetOption();
         HandleLibraryMenuOption(Option);
@@ -306,7 +313,6 @@ void MEngine::OpenMenuPlaybackMode()
     CurrentMenuSection = EMenuSection::PlaybackMenu;
     while (!bWantBackFromPlaybackMenu) 
     {
-        SyncAudioState();
         EPlaybackMenuOption Option = EPlaybackMenuOption::None;
         Option = ShowPlaybackModeMenuAndGetOption();
         HandlePlaybackModeMenuOption(Option);
@@ -446,6 +452,8 @@ void MEngine::HandleLibraryMenuOption(ELibraryMenuOption InOption)
 
 void MEngine::HandlePlaybackModeMenuOption(EPlaybackMenuOption InOption) 
 {
+    std::lock_guard<std::mutex> Lock(EngineMutex);
+
     switch (InOption) 
     {
         case EPlaybackMenuOption::Once:
@@ -476,6 +484,8 @@ void MEngine::HandlePlaybackModeMenuOption(EPlaybackMenuOption InOption)
 
 bool MEngine::TryExitOption() 
 {
+    std::lock_guard<std::mutex> Lock(EngineMutex);
+
     if (AudioBackend.ShutDown()) 
     {
         SetAudioPlayerState(EAudioPlayerState::Idle);
@@ -488,6 +498,8 @@ bool MEngine::TryExitOption()
 
 bool MEngine::TryPrevOption() 
 {   
+    std::lock_guard<std::mutex> Lock(EngineMutex);
+    
     std::filesystem::path Path = TrackLibrary.GetPrevTrackPath();
     if (bForcePlayAfterSwitch && !TrackLibrary.IsEmpty() && !Path.empty())
     {
@@ -520,6 +532,8 @@ bool MEngine::TryPrevOption()
 
 bool MEngine::TryPlayOption() 
 {
+    std::lock_guard<std::mutex> Lock(EngineMutex);
+    
     std::filesystem::path Path = TrackLibrary.GetCurrentTrackPath();
    
     if (AudioPlayerState == EAudioPlayerState::Paused ) 
@@ -551,6 +565,8 @@ bool MEngine::TryPlayOption()
 
 bool MEngine::TryPauseOption() 
 {
+    std::lock_guard<std::mutex> Lock(EngineMutex);
+    
     bool bContinue = false;
     
     if (AudioPlayerState == EAudioPlayerState::Playing)
@@ -567,6 +583,8 @@ bool MEngine::TryPauseOption()
 
 bool MEngine::TryStopOption() 
 {
+    std::lock_guard<std::mutex> Lock(EngineMutex);
+    
     bool bContinue = false;
     
     if (AudioPlayerState == EAudioPlayerState::Playing || AudioPlayerState == EAudioPlayerState::Paused)
@@ -583,6 +601,8 @@ bool MEngine::TryStopOption()
 
 bool MEngine::TryNextOption() 
 {
+    std::lock_guard<std::mutex> Lock(EngineMutex);
+    
     std::filesystem::path Path = TrackLibrary.GetNextTrackPath();
     if (bForcePlayAfterSwitch && !TrackLibrary.IsEmpty() && !Path.empty())
     {
@@ -709,6 +729,8 @@ void MEngine::WriteTrackListToTrackLibrary(const std::filesystem::path &InPath)
 
 void MEngine::RefreshTrackLibrary(const std::filesystem::path &InPath)
 {
+    std::lock_guard<std::mutex> Lock(EngineMutex);
+    
     if (AudioPlayerState == EAudioPlayerState::Playing || AudioPlayerState == EAudioPlayerState::Paused) 
     {
         AudioBackend.StopTrack();
@@ -725,6 +747,8 @@ void MEngine::SelectTrackByIndex()
     
     int TrackLibrarySize = TrackLibrary.GetTrackListSize() - 1;
     int TrackIndex = ReadIntInRange(0, TrackLibrarySize, "Enter index: ");
+    
+    std::lock_guard<std::mutex> Lock(EngineMutex);
     
     if (bForcePlayAfterSwitch) 
     {
@@ -782,5 +806,30 @@ int MEngine::ReadIntInRange(int Min, int Max, const std::string& Prompt)
         std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
         std::cout << std::endl << "[TAP::ERROR] Input must be an integer between " << Min << " and " << Max << "." 
             << std::endl;
+    }
+}
+
+void MEngine::StartAudioSyncThread() 
+{
+    if (bAudioSyncThreadRunning) return;
+    
+    bAudioSyncThreadRunning = true;
+    
+    AudioSyncThread = std::thread([this]()
+    {
+        while (bAudioSyncThreadRunning) 
+        {
+            SyncAudioState();
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+    });
+}
+
+void MEngine::StopAudioSyncThread() 
+{
+    bAudioSyncThreadRunning = false;
+    if (AudioSyncThread.joinable()) 
+    {
+        AudioSyncThread.join();
     }
 }

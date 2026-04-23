@@ -8,6 +8,9 @@
 #include "Audio/AudioFileScanner.h"
 
 #include <string>
+#include <thread>
+#include <atomic>
+#include <mutex>
 
 enum class EAudioPlayerState
 {
@@ -33,7 +36,8 @@ public:
     void SyncAudioState();
     void RunMainLoop();
 
-private:
+private: // --- Functions ---
+    
     void PrintMainMenuAndState();
     void PrintLibraryMenuAndState();
     void PrintPlaybackModeMenuAndState();
@@ -70,15 +74,26 @@ private:
     void SelectTrackByIndex();
     int ReadIntInRange(int Min, int Max, const std::string& Prompt);
     
+    void StartAudioSyncThread();
+    void StopAudioSyncThread();
+    
+private: // --- Variables ---
+    
     EAudioPlayerState AudioPlayerState;
     EPlaybackMode PlaybackMode;
     EMenuSection CurrentMenuSection;
+    
     bool bForcePlayAfterSwitch;
     bool bWantExit;
     bool bWantBackFromLibraryMenu;
     bool bWantBackFromPlaybackMenu;
     bool bPrintDebugInfo;
+    
     std::string DefaultContentDir;
+    std::thread AudioSyncThread;
+    std::atomic<bool> bAudioSyncThreadRunning;
+    std::mutex EngineMutex;
+    
     MAudioBackend AudioBackend;
     MFileManager FileManager;
     MTrackLibrary TrackLibrary;
