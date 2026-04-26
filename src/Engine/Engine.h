@@ -7,11 +7,14 @@
 #include "FileManager/FileManager.h"
 #include "TrackLibrary/TrackLibrary.h"
 #include "Audio/AudioFileScanner.h"
+#include "UI/ConsoleIO/ConsoleIO.h"
 
 #include <string>
 #include <thread>
 #include <atomic>
 #include <mutex>
+
+struct FUISnapshotData;
 
 class MEngine 
 {
@@ -23,15 +26,6 @@ public:
     void RunMainLoop();
 
 private: // --- Functions ---
-    
-    void PrintMainMenuAndState();
-    void PrintLibraryMenuAndState();
-    void PrintPlaybackModeMenuAndState();
-    void PrintAudioPlayerState();
-    void PrintPlaybackMode();
-    void PrintTrackList();
-    void PrintCurrentTrack();
-    void PrintMenuSection();
     
     EMainMenuOption ShowMainMenuAndGetOption();
     ELibraryMenuOption ShowLibraryMenuAndGetOption();
@@ -58,11 +52,12 @@ private: // --- Functions ---
     void WriteTrackListToTrackLibrary(const std::filesystem::path &InPath);
     void RefreshTrackLibrary(const std::filesystem::path &InPath);
     void SelectTrackByIndex();
-    int ReadIntInRange(int Min, int Max, const std::string& Prompt);
     
     void StartAudioSyncThread();
     void StopAudioSyncThread();
     
+    FUISnapshotData BuildUISnapshotData();
+
 private: // --- Variables ---
     
     EAudioPlayerState AudioPlayerState;
@@ -84,4 +79,5 @@ private: // --- Variables ---
     MFileManager FileManager;
     MTrackLibrary TrackLibrary;
     MAudioFileScanner AudioFileScanner;
+    MConsoleIO ConsoleIO;
 };

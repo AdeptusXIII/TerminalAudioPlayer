@@ -1,8 +1,9 @@
 //Developed by AdeptusXIII(c). All Rights Reserved. UCC 1-308 "Without Prejudice".
 #include "Engine.h"
 
+#include "UI//UISnapshot.h"
+
 #include <iostream>
-#include <limits>
 #include <filesystem>
 #include <chrono>
 
@@ -82,225 +83,29 @@ void MEngine::RunMainLoop()
     StopAudioSyncThread();
 }
 
-void MEngine::PrintMainMenuAndState()
-{
-    PrintAudioPlayerState();
-    PrintPlaybackMode();
-    PrintCurrentTrack();
-    PrintMenuSection();
-    
-    std::cout << "Choose option: " << std::endl;
-    std::cout << SUBCAT_SEP_TAB << SUBCAT_SEP_T << "(1) - [ Prev ]" << std::endl;
-    std::cout << SUBCAT_SEP_TAB << SUBCAT_SEP_T << "(2) - [ Play ]" << std::endl;
-    std::cout << SUBCAT_SEP_TAB << SUBCAT_SEP_T << "(3) - [ Pause ]" << std::endl;
-    std::cout << SUBCAT_SEP_TAB << SUBCAT_SEP_T << "(4) - [ Stop ]" << std::endl;
-    std::cout << SUBCAT_SEP_TAB << SUBCAT_SEP_T << "(5) - [ Next ]" << std::endl;
-    std::cout << SUBCAT_SEP_TAB << SUBCAT_SEP_T << "(6) - [ Library ]" << std::endl;
-    std::cout << SUBCAT_SEP_TAB << SUBCAT_SEP_T << "(7) - [ Playback-Mode ]" << std::endl;
-    std::cout << SUBCAT_SEP_TAB << SUBCAT_SEP_L << "(0) - [ Exit ]" << std::endl;
-}
-
-void MEngine::PrintLibraryMenuAndState() 
-{
-    PrintAudioPlayerState();
-    PrintPlaybackMode();
-    PrintCurrentTrack();
-    PrintMenuSection();
-    
-    std::cout << "Choose option: " << std::endl;
-    std::cout << SUBCAT_SEP_TAB << SUBCAT_SEP_T << "(1) - [ List ]" << std::endl;
-    std::cout << SUBCAT_SEP_TAB << SUBCAT_SEP_T << "(2) - [ Select track by index ]" << std::endl;
-    std::cout << SUBCAT_SEP_TAB << SUBCAT_SEP_T << "(3) - [ Refresh ]" << std::endl;
-    std::cout << SUBCAT_SEP_TAB << SUBCAT_SEP_L << "(0) - [ Back ]" << std::endl;
-}
-
-void MEngine::PrintPlaybackModeMenuAndState() 
-{
-    PrintAudioPlayerState();
-    PrintPlaybackMode();
-    PrintCurrentTrack();
-    PrintMenuSection();
-    
-    std::cout << "Choose option: " << std::endl;
-    std::cout << SUBCAT_SEP_TAB << SUBCAT_SEP_T << "(1) - [ Once ]" << std::endl;
-    std::cout << SUBCAT_SEP_TAB << SUBCAT_SEP_T << "(2) - [ Loop One ]" << std::endl;
-    std::cout << SUBCAT_SEP_TAB << SUBCAT_SEP_T << "(3) - [ Loop All ]" << std::endl;
-    std::cout << SUBCAT_SEP_TAB << SUBCAT_SEP_T << "(4) - [ Loop Shuffle ]" << std::endl;
-    std::cout << SUBCAT_SEP_TAB << SUBCAT_SEP_L << "(0) - [ Back ]" << std::endl;
-}
-
-void MEngine::PrintAudioPlayerState()
-{
-    EAudioPlayerState CurrentAudioPlayerState = EAudioPlayerState::None;
-    std::lock_guard<std::mutex> Lock(EngineMutex);
-    {
-        CurrentAudioPlayerState = AudioPlayerState;
-    }
-    
-    switch (CurrentAudioPlayerState)
-    {
-        case EAudioPlayerState::Idle:
-            std::cout << std::endl << "[TAP::STATE::IDLE]" << std::endl;
-            break;
-
-        case EAudioPlayerState::Playing:
-            std::cout << std::endl <<  "[TAP::STATE::PLAYING]" << std::endl;
-            break;
-
-        case EAudioPlayerState::Paused:
-            if (bPrintDebugInfo) 
-                std::cout << std::endl << "[TAP::STATE::PAUSED]" << std::endl;
-            break;
-    }
-}
-
-void MEngine::PrintPlaybackMode() 
-{
-    EPlaybackMode CurrentPlaybackMode = EPlaybackMode::None;
-    std::lock_guard<std::mutex> Lock(EngineMutex);
-    {
-        CurrentPlaybackMode = PlaybackMode;
-    }
-    
-    switch (CurrentPlaybackMode) 
-    {
-        case EPlaybackMode::Once:
-            if (bPrintDebugInfo) 
-            {
-                std::cout << "[PlaybackMode]::Once" << std::endl;
-            }
-            else 
-            {
-                std::cout << "[TAP::PLAYBACK-MODE::ONCE]" << std::endl;
-            }
-            break;
-            
-        case EPlaybackMode::LoopOne:
-            if (bPrintDebugInfo) 
-            {
-                std::cout << "[PlaybackMode]::LoopOne" << std::endl;
-            }
-            else 
-            {
-                std::cout << "[TAP::PLAYBACK-MODE::LOOP-ONE]" << std::endl;
-            }
-            break;
-            
-        case EPlaybackMode::LoopAll:
-            if (bPrintDebugInfo) 
-            {
-                std::cout << "[PlaybackMode]::LoopAll" << std::endl;
-            }
-            else 
-            {
-                std::cout<< "[TAP::PLAYBACK-MODE::LOOP-ALL]" << std::endl;
-            }
-            break;   
-            
-        case EPlaybackMode::LoopShuffle:
-            if (bPrintDebugInfo) 
-            {
-                std::cout << "[PlaybackMode]::LoopShuffle" << std::endl;
-            }
-            else 
-            {
-                std::cout << "[TAP::PLAYBACK-MODE::LOOP-SHUFFLE]" << std::endl;
-            }
-            break;        
-    }
-}
-
-void MEngine::PrintTrackList()
-{
-    int TrackCount = 0;
-    int CurrentIndex = 0;
-    std::vector<std::string> TrackNames;
-
-    {
-        std::lock_guard<std::mutex> Lock(EngineMutex);
-
-        TrackCount = TrackLibrary.GetTrackListSize();
-        CurrentIndex = TrackLibrary.GetCurrentIndex();
-
-        for (int i = 0; i < TrackCount; i++)
-        {
-            TrackNames.push_back(TrackLibrary.GetTrackNameByIndex(i));
-        }
-    }
-
-    std::cout << std::endl;
-    PrintMenuSection();
-    std::cout << "Total tracks found: " << TrackCount << std::endl;
-
-    for (int i = 0; i < TrackCount; i++)
-    {
-        std::string CurrentTrack = (i == CurrentIndex) ? " <- current/selected" : "";
-        std::string SubCatTorL = (i == TrackCount - 1) ? SUBCAT_SEP_L : SUBCAT_SEP_T;
-
-        std::cout << SUBCAT_SEP_TAB + SubCatTorL 
-                  << "Index(" << i << ")" 
-                  << "[" << TrackNames[i] 
-                  << "] "
-                  << CurrentTrack
-                  << std::endl;
-    }
-}
-
-void MEngine::PrintCurrentTrack() 
-{
-    std::string CurrentTrackName = "None";
-    std::lock_guard<std::mutex> Lock(EngineMutex);
-    {
-        CurrentTrackName = TrackLibrary.GetCurrentTrackName();
-    }
-    
-    std::cout << "[TAP::SELECTED TRACK:: " << CurrentTrackName << "]" << std::endl;
-}
-
-void MEngine::PrintMenuSection() 
-{
-    std::string MenuSection = {};
-    switch (CurrentMenuSection) 
-    {
-        case EMenuSection::MainMenu:
-            MenuSection = "MENU";
-            break;
-            
-        case EMenuSection::LibraryMenu:
-            MenuSection = "LIBRARY";
-            break;
-            
-        case EMenuSection::PlaybackMenu:
-            MenuSection = "PLAYBACK-MODE";
-            break;    
-    }
-    
-    std::cout << "[TAP::" << MenuSection << "] ";
-}
-
 EMainMenuOption MEngine::ShowMainMenuAndGetOption()
 {
-    PrintMainMenuAndState();
+    ConsoleIO.PrintMainMenuAndState(BuildUISnapshotData());
     
-    int Option = ReadIntInRange(0, MAX_MAIN_MENU_OPTION_COUNT, "[TAP::MENU] Enter opt: ");
+    int Option = ConsoleIO.ReadIntInRange(0, MAX_MAIN_MENU_OPTION_COUNT, "[TAP::MENU] Enter opt: ");
     
     return static_cast<EMainMenuOption>(Option);
 }
 
 ELibraryMenuOption MEngine::ShowLibraryMenuAndGetOption() 
 {
-    PrintLibraryMenuAndState();
+    ConsoleIO.PrintLibraryMenuAndState(BuildUISnapshotData());
     
-    int Option = ReadIntInRange(0, MAX_LIBRARY_MENU_OPTION_COUNT, "[TAP::LIBRARY] Enter opt: ");
+    int Option = ConsoleIO.ReadIntInRange(0, MAX_LIBRARY_MENU_OPTION_COUNT, "[TAP::LIBRARY] Enter opt: ");
     
     return static_cast<ELibraryMenuOption>(Option);
 }
 
 EPlaybackMenuOption MEngine::ShowPlaybackModeMenuAndGetOption() 
 {
-    PrintPlaybackModeMenuAndState();
+    ConsoleIO.PrintPlaybackModeMenuAndState(BuildUISnapshotData());
     
-    int Option = ReadIntInRange(0, MAX_PLAYBACK_MENU_OPTION_COUNT, "[TAP::PLAYBACK-MODE] Enter opt: ");
+    int Option = ConsoleIO.ReadIntInRange(0, MAX_PLAYBACK_MENU_OPTION_COUNT, "[TAP::PLAYBACK-MODE] Enter opt: ");
     
     return static_cast<EPlaybackMenuOption>(Option);
 }
@@ -401,7 +206,7 @@ void MEngine::HandleLibraryMenuOption(ELibraryMenuOption InOption)
 {
     switch (InOption) {
         case ELibraryMenuOption::List:
-            PrintTrackList();
+            ConsoleIO.PrintTrackList(BuildUISnapshotData());
             break;
             
         case ELibraryMenuOption::SelectByIndex:
@@ -411,9 +216,12 @@ void MEngine::HandleLibraryMenuOption(ELibraryMenuOption InOption)
         case ELibraryMenuOption::Refresh: 
             {
                 RefreshTrackLibrary(DefaultContentDir);
-                std::lock_guard<std::mutex> Lock(EngineMutex);
-                std::cout << "[TAP::LIBRARY] Library refreshed. Total tracks found: "
-                          << TrackLibrary.GetTrackListSize() << "." << std::endl;
+                int TrackCount = 0;
+                {
+                    std::lock_guard<std::mutex> Lock(EngineMutex);
+                    TrackCount = TrackLibrary.GetTrackListSize();
+                }
+                ConsoleIO.PrintTotalTracksNum(TrackCount);
                 break;
             }
             
@@ -731,7 +539,7 @@ void MEngine::SelectTrackByIndex()
         TrackLibrarySize = TrackLibrary.GetTrackListSize() - 1;
     }
     
-    int TrackIndex = ReadIntInRange(0, TrackLibrarySize, "Enter index: ");
+    int TrackIndex = ConsoleIO.ReadIntInRange(0, TrackLibrarySize, "Enter index: ");
     
     std::lock_guard<std::mutex> Lock(EngineMutex);
     
@@ -776,30 +584,6 @@ void MEngine::SelectTrackByIndex()
     }
 }
 
-int MEngine::ReadIntInRange(int Min, int Max, const std::string& Prompt)
-{
-    int Value = -1;
-    
-    while (true)
-    {
-        std::cout << Prompt;
-        std::cin >> Value;
-        
-        bool bInputValid = !std::cin.fail();
-        bool bInputInRange = bInputValid && !(Value < Min || Value > Max);
-        
-        if (bInputInRange) 
-        {
-            return Value;
-        }
-        
-        std::cin.clear();
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        std::cout << std::endl << "[TAP::ERROR] Input must be an integer between " << Min << " and " << Max << "." 
-            << std::endl;
-    }
-}
-
 void MEngine::StartAudioSyncThread() 
 {
     if (bAudioSyncThreadRunning) return;
@@ -823,4 +607,30 @@ void MEngine::StopAudioSyncThread()
     {
         AudioSyncThread.join();
     }
+}
+
+FUISnapshotData MEngine::BuildUISnapshotData() 
+{
+    FUISnapshotData SnapshotData;
+    {
+        std::lock_guard<std::mutex> Lock(EngineMutex);
+        
+        SnapshotData.AudioPlayerState = AudioPlayerState;
+        SnapshotData.PlaybackMode = PlaybackMode;
+        SnapshotData.CurrentMenuSection = CurrentMenuSection;
+        SnapshotData.TrackCount = TrackLibrary.GetTrackListSize();
+        SnapshotData.CurrentTrackIndex = TrackLibrary.GetCurrentIndex();
+        SnapshotData.CurrentTrackName = TrackLibrary.GetCurrentTrackName();
+        
+        std::vector<std::string> TrackNames;
+        
+        for (int i = 0; i < SnapshotData.TrackCount; i++)
+        {
+            TrackNames.push_back(TrackLibrary.GetTrackNameByIndex(i));
+        }
+        
+        SnapshotData.TrackList = TrackNames;
+    }
+    
+    return SnapshotData;
 }

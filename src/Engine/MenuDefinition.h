@@ -7,26 +7,7 @@ const int MAX_MAIN_MENU_OPTION_COUNT = 7;
 const int MAX_LIBRARY_MENU_OPTION_COUNT = 3;
 const int MAX_PLAYBACK_MENU_OPTION_COUNT = 4;
 
-/** SubCategory Separator Type T: "├──" */
-const std::string SUBCAT_SEP_T = "├──";
 
-/** SubCategory Separator Type L: "└──" */
-const std::string SUBCAT_SEP_L = "└──";
-
-/** SubCategory Separator Type I: "│" */
-const std::string SUBCAT_SEP_I = "│";
-
-/** SubCategory Separator Type TAB: "  " */
-const std::string SUBCAT_SEP_TAB = "  ";
-
-enum class EMenuSection 
-{
-    MainMenu,
-    LibraryMenu,
-    PlaybackMenu,
-    
-    None
-};
 
 enum class EMainMenuOption
 {

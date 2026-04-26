@@ -20,6 +20,10 @@ add_executable(terminal_player
         src/Audio/AudioFileScanner.h
         src/Engine/MenuDefinition.h
         src/Types/PlaybackTypes.h
+        src/UI/ConsoleIO/ConsoleIO.cpp
+        src/UI/ConsoleIO/ConsoleIO.h
+        src/UI/UISnapshot.h
+        src/Types/UI/ConsoleIOTypes.h
 )
 
 target_include_directories(terminal_player PRIVATE src)
