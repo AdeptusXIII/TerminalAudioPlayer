@@ -1,6 +1,7 @@
 //Developed by AdeptusXIII(c). All Rights Reserved. UCC 1-308 "Without Prejudice".
 #pragma once
 
+#include "Types/PlaybackTypes.h"
 #include "Engine/MenuDefinition.h"
 #include "Audio/AudioBackend.h"
 #include "FileManager/FileManager.h"
@@ -11,25 +12,6 @@
 #include <thread>
 #include <atomic>
 #include <mutex>
-
-enum class EAudioPlayerState
-{
-    Idle,
-    Playing,
-    Paused,
-    
-    None
-};
-
-enum class EPlaybackMode 
-{
-    Once,
-    LoopOne,
-    LoopAll,
-    LoopShuffle,
-    
-    None
-};
 
 class MEngine 
 {
