@@ -20,6 +20,8 @@ public:
     
     void SetLoop(bool bLoop);
     
+    void SetVolume(float Volume);
+    
     bool ShutDown();
     
     

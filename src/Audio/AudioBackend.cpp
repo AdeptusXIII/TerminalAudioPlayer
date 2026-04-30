@@ -106,6 +106,11 @@ void MAudioBackend::SetLoop(bool bLoop)
     Sound.setLoop(bLoop);
 }
 
+void MAudioBackend::SetVolume(float Volume)
+{
+    Sound.setVolume(Volume);
+}
+
 bool MAudioBackend::ShutDown() 
 {
     Sound.stop();

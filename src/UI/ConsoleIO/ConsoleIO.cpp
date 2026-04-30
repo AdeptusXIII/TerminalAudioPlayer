@@ -2,10 +2,11 @@
 
 #include "UI/ConsoleIO/ConsoleIO.h"
 
-#include "../UISnapshot.h"
+#include "UI/UISnapshot.h"
 
 #include <iostream>
 #include <limits>
+#include <sstream>
 
 MConsoleIO::MConsoleIO() 
 {
@@ -188,4 +189,99 @@ void MConsoleIO::PrintMenuSection(const EMenuSection &InMenuSection)
     }
     
     std::cout << "[TAP::" << MenuSection << "] ";
+}
+
+FCommand MConsoleIO::ReadCommand()
+{
+    std::string Input;
+    std::cout << "Enter command: ";
+    std::getline(std::cin, Input);
+
+    FCommand Command;
+    std::vector<std::string> Tokens;
+    std::istringstream Stream(Input);
+    std::string Word;
+
+    while (Stream >> Word)
+    {
+        Tokens.push_back(Word);
+    }
+    
+    if (Tokens[0] == "play") 
+    {
+        Command.Type = ECommandType::Play;
+        Command.RawInput = Input;
+        return Command;
+    }
+    if (Tokens[0] == "pause") 
+    {
+        Command.Type = ECommandType::Pause;
+        Command.RawInput = Input;
+        return Command;
+    }
+    if (Tokens[0] == "stop") 
+    {
+        Command.Type = ECommandType::Stop;
+        Command.RawInput = Input;
+        return Command;
+    }
+    if (Tokens[0] == "next") 
+    {
+        Command.Type = ECommandType::Next;
+        Command.RawInput = Input;
+        return Command;
+    }
+    if (Tokens[0] == "prev") 
+    {
+        Command.Type = ECommandType::Prev;
+        Command.RawInput = Input;
+        return Command;
+    }
+    if (Tokens[0] == "list") 
+    {
+        Command.Type = ECommandType::List;
+        Command.RawInput = Input;
+        return Command;
+    }
+    if (Tokens[0] == "refresh") 
+    {
+        Command.Type = ECommandType::Refresh;
+        Command.RawInput = Input;
+        return Command;
+    }
+    if (Tokens[0] == "exit") 
+    {
+        Command.Type = ECommandType::Exit;
+        Command.RawInput = Input;
+        return Command;
+    }
+    if (Tokens[0] == "help") 
+    {
+        Command.Type = ECommandType::Help;
+        Command.RawInput = Input;
+        return Command;
+    }
+    if (Tokens[0] == "mode") 
+    {
+        Command.Type = ECommandType::Mode;
+        if (Tokens.size() >= 2) Command.Args.emplace_back(Tokens[1]);
+        Command.RawInput = Input;
+        return Command;
+    }
+    if (Tokens[0] == "select") 
+    {
+        Command.Type = ECommandType::Select;
+        if (Tokens.size() >= 2) Command.Args.emplace_back(Tokens[1]);
+        Command.RawInput = Input;
+        return Command;
+    }
+    if (Tokens[0] == "volume") 
+    {
+        Command.Type = ECommandType::Volume;
+        if (Tokens.size() >= 2) Command.Args.emplace_back(Tokens[1]);
+        Command.RawInput = Input;
+        return Command;
+    }
+    
+    return {};
 }

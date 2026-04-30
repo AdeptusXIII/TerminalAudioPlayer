@@ -7,8 +7,6 @@ const int MAX_MAIN_MENU_OPTION_COUNT = 7;
 const int MAX_LIBRARY_MENU_OPTION_COUNT = 3;
 const int MAX_PLAYBACK_MENU_OPTION_COUNT = 4;
 
-
-
 enum class EMainMenuOption
 {
     Exit = 0,
@@ -42,4 +40,13 @@ enum class EPlaybackMenuOption
     LoopShuffle = 4,
     
     None = 99
+};
+
+enum class EMenuSection 
+{
+    MainMenu,
+    LibraryMenu,
+    PlaybackMenu,
+    
+    None
 };

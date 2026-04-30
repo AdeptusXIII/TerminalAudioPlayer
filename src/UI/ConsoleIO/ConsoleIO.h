@@ -3,7 +3,8 @@
 #pragma once 
 
 #include "Types/PlaybackTypes.h"
-#include "Types/UI/ConsoleIOTypes.h"
+#include "UI/ConsoleIO/MenuDefinition.h"
+#include "Types/CommandTypes.h"
 
 #include <string>
 #include <vector>
@@ -27,6 +28,7 @@ class MConsoleIO
 public:
     MConsoleIO();
     
+    // MENU MODE FUNCTIONS
     void PrintMainMenuAndState(const FUISnapshotData &UISnapshot);
     void PrintLibraryMenuAndState(const FUISnapshotData &UISnapshot);
     void PrintPlaybackModeMenuAndState(const FUISnapshotData &UISnapshot);
@@ -34,6 +36,9 @@ public:
     void PrintTotalTracksNum(const int &InTotalTracks);
     
     int ReadIntInRange(int Min, int Max, const std::string& Prompt);
+    
+    // COMMAND LINE MODE FUNCTIONS
+    FCommand ReadCommand();
     
 private:
     

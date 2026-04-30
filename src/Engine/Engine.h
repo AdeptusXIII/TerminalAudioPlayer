@@ -2,7 +2,7 @@
 #pragma once
 
 #include "Types/PlaybackTypes.h"
-#include "Engine/MenuDefinition.h"
+#include "UI/ConsoleIO/MenuDefinition.h"
 #include "Audio/AudioBackend.h"
 #include "FileManager/FileManager.h"
 #include "TrackLibrary/TrackLibrary.h"
@@ -14,6 +14,9 @@
 #include <atomic>
 #include <mutex>
 
+const float MAX_VOLUME = 100;
+const float MIN_VOLUME = 0;
+
 struct FUISnapshotData;
 
 class MEngine 
@@ -23,10 +26,13 @@ public:
     
     void Init();
     void SyncAudioState();
-    void RunMainLoop();
+    void RunMenuLoop();
+    void RunCommandLoop();
+
 
 private: // --- Functions ---
     
+    // MENU MODE FUNCTTIONS
     EMainMenuOption ShowMainMenuAndGetOption();
     ELibraryMenuOption ShowLibraryMenuAndGetOption();
     EPlaybackMenuOption ShowPlaybackModeMenuAndGetOption();
@@ -34,24 +40,36 @@ private: // --- Functions ---
     void OpenMenuLibrary();
     void OpenMenuPlaybackMode();
     
-    void SetAudioPlayerState(EAudioPlayerState TargetAudioPlayerState);
     void HandleMainMenuOption(EMainMenuOption InOption);
     void HandleLibraryMenuOption(ELibraryMenuOption InOption);
     void HandlePlaybackModeMenuOption(EPlaybackMenuOption InOption);
     
-    bool TryExitOption();
-    bool TryPrevOption();
-    bool TryPlayOption();
-    bool TryPauseOption();
-    bool TryStopOption();
-    bool TryNextOption();
-    bool TryPlayNextTrackOrFirst();
-    bool TryPlayRandomTrack();
+    void MenuSelectTrackByIndex();
     
+    // COMMAND LINE MODE FUNCTIONS
+    void HandleCommandPromt(const FCommand &InCommandPrompt);
+    void HandleCommandArg_Mode(const std::string &Arg);
+    
+    void CommandSelectTrackByIndex(const std::string &ArgIndex);
+    bool CommandArgIsInt(const std::string &Arg);
+    bool CommandParseVolume(const std::string &Arg);
+    
+    // UNIVERSAL FUNCTIONS
+    void SetAudioPlayerState(EAudioPlayerState TargetAudioPlayerState);
     bool CreateDefaultContentDir();
     void WriteTrackListToTrackLibrary(const std::filesystem::path &InPath);
     void RefreshTrackLibrary(const std::filesystem::path &InPath);
-    void SelectTrackByIndex();
+    void ApplyCurrentVolume();
+    
+    bool TryExit();
+    bool TryPrev();
+    bool TryPlay();
+    bool TryPause();
+    bool TryStop();
+    bool TryNext();
+    
+    bool TryPlayNextTrackOrFirst();
+    bool TryPlayRandomTrack();
     
     void StartAudioSyncThread();
     void StopAudioSyncThread();
@@ -69,6 +87,8 @@ private: // --- Variables ---
     bool bWantBackFromLibraryMenu;
     bool bWantBackFromPlaybackMenu;
     bool bPrintDebugInfo;
+    
+    float CurrentVolume;
     
     std::string DefaultContentDir;
     std::thread AudioSyncThread;
