@@ -10,10 +10,9 @@ class MFileManager
 public:
     MFileManager();
     
-    void Init(bool bInPrintDebugInfo);
+    void Init();
     bool CreateDir(const std::string &Dir) const;
     
 private:
-    bool bPrintDebugInfo;
 };
 

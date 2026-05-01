@@ -2,16 +2,16 @@
 
 #include "FileManager.h"
 
+#include "Engine/GlobalParameters.h"
+
 #include <iostream>
 
 MFileManager::MFileManager()
 {
-    bPrintDebugInfo = false;
 }
 
-void MFileManager::Init(bool bInPrintDebugInfo) 
+void MFileManager::Init() 
 {
-    bPrintDebugInfo = bInPrintDebugInfo;
 }
 
 bool MFileManager::CreateDir(const std::string &Dir) const
@@ -22,7 +22,7 @@ bool MFileManager::CreateDir(const std::string &Dir) const
     {
         if (std::filesystem::create_directories(Dir))
         {
-            if (bPrintDebugInfo) 
+            if (gp::bPrintDebugInfo) 
             {
                 std::cout << "[FileManager] Directory " << Dir << " created successfully." << std::endl;
             }

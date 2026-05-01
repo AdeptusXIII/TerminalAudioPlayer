@@ -3,6 +3,7 @@
 #pragma once 
 
 #include <vector>
+#include <string>
 
 enum class ECommandType
 {
@@ -18,7 +19,8 @@ enum class ECommandType
     Help,
     Mode,
     Select,
-    Volume
+    Volume,
+    Status
 };
 
 struct FCommand

@@ -10,7 +10,6 @@ struct FUISnapshotData
 {
     EAudioPlayerState AudioPlayerState = EAudioPlayerState::None;
     EPlaybackMode PlaybackMode = EPlaybackMode::None;
-    EMenuSection CurrentMenuSection = EMenuSection::None;
     
     int TrackCount = -1;
     int CurrentTrackIndex = -1;

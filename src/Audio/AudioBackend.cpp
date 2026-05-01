@@ -2,24 +2,24 @@
 
 #include "AudioBackend.h"
 
+#include "Engine/GlobalParameters.h"
+
 #include <iostream>
 #include <string>
 
 MAudioBackend::MAudioBackend() 
 {
-    bPrintDebugInfo = false;
 }
 
-void MAudioBackend::Init(bool InPrintDebugInfo) 
+void MAudioBackend::Init() 
 {
-    bPrintDebugInfo = InPrintDebugInfo;
 }
 
 bool MAudioBackend::PlayTrack(const std::filesystem::path &TrackPath)
 {
     if (!LoadBufferFromFile(TrackPath))
     {
-        if (bPrintDebugInfo) 
+        if (gp::bPrintDebugInfo) 
         {
             std::cout << "[AudioBackend] Failed to load track." << std::endl;
         }
@@ -33,7 +33,7 @@ bool MAudioBackend::PlayTrack(const std::filesystem::path &TrackPath)
         Sound.play();
         if (Sound.getStatus() == sf::Sound::Status::Playing) 
         {
-            if (bPrintDebugInfo)
+            if (gp::bPrintDebugInfo)
             {
                 std::cout << "[AudioBackend] Track playing." << std::endl;
             }
@@ -50,7 +50,7 @@ bool MAudioBackend::ResumeTrack()
     if (Sound.getStatus() != sf::Sound::Status::Paused) return false;
     
     Sound.play();
-    if (bPrintDebugInfo) 
+    if (gp::bPrintDebugInfo) 
     {
         std::cout << "[AudioBackend] Track resumed." << std::endl;
     }
@@ -66,7 +66,7 @@ bool MAudioBackend::PauseTrack()
         Sound.pause();
         if (Sound.getStatus() == sf::Sound::Status::Paused) 
         {
-            if (bPrintDebugInfo)
+            if (gp::bPrintDebugInfo)
             {
                 std::cout << "[AudioBackend] Track paused." << std::endl;
             }
@@ -85,7 +85,7 @@ bool MAudioBackend::StopTrack()
         Sound.stop();
         if (Sound.getStatus() == sf::Sound::Status::Stopped) 
         {
-            if (bPrintDebugInfo)
+            if (gp::bPrintDebugInfo)
             {
                 std::cout << "[AudioBackend] Track Stopped." << std::endl;
             }

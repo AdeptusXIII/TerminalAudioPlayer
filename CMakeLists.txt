@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(TerminalAudioPlayer VERSION 0.10 LANGUAGES CXX)
+project(TerminalAudioPlayer VERSION 0.11 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -18,12 +18,15 @@ add_executable(terminal_player
         src/TrackLibrary/TrackLibrary.h
         src/Audio/AudioFileScanner.cpp
         src/Audio/AudioFileScanner.h
-        src/UI/ConsoleIO/MenuDefinition.h
         src/Types/PlaybackTypes.h
+        src/Types/CommandTypes.h
         src/UI/ConsoleIO/ConsoleIO.cpp
         src/UI/ConsoleIO/ConsoleIO.h
         src/UI/UISnapshot.h
-        src/Types/CommandTypes.h
+        src/Engine/CommandDataTable.h
+        src/Engine/GlobalParameters.h
+        src/Engine/GlobalParameters.cpp
+        src/Engine/StringTemplates.h
 )
 
 target_include_directories(terminal_player PRIVATE src)

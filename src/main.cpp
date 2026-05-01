@@ -6,8 +6,7 @@ int main()
 {
     MEngine Engine;
     Engine.Init();
-    //Engine.RunMainLoop();
-    Engine.RunCommandLoop();
+    Engine.RunCommandLineLoop();
 
     return 0;
 }

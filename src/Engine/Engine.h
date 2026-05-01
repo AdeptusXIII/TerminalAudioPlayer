@@ -1,8 +1,8 @@
 //Developed by AdeptusXIII(c). All Rights Reserved. UCC 1-308 "Without Prejudice".
+
 #pragma once
 
 #include "Types/PlaybackTypes.h"
-#include "UI/ConsoleIO/MenuDefinition.h"
 #include "Audio/AudioBackend.h"
 #include "FileManager/FileManager.h"
 #include "TrackLibrary/TrackLibrary.h"
@@ -14,9 +14,6 @@
 #include <atomic>
 #include <mutex>
 
-const float MAX_VOLUME = 100;
-const float MIN_VOLUME = 0;
-
 struct FUISnapshotData;
 
 class MEngine 
@@ -26,29 +23,14 @@ public:
     
     void Init();
     void SyncAudioState();
-    void RunMenuLoop();
-    void RunCommandLoop();
-
+    void RunCommandLineLoop();
 
 private: // --- Functions ---
-    
-    // MENU MODE FUNCTTIONS
-    EMainMenuOption ShowMainMenuAndGetOption();
-    ELibraryMenuOption ShowLibraryMenuAndGetOption();
-    EPlaybackMenuOption ShowPlaybackModeMenuAndGetOption();
-    
-    void OpenMenuLibrary();
-    void OpenMenuPlaybackMode();
-    
-    void HandleMainMenuOption(EMainMenuOption InOption);
-    void HandleLibraryMenuOption(ELibraryMenuOption InOption);
-    void HandlePlaybackModeMenuOption(EPlaybackMenuOption InOption);
-    
-    void MenuSelectTrackByIndex();
     
     // COMMAND LINE MODE FUNCTIONS
     void HandleCommandPromt(const FCommand &InCommandPrompt);
     void HandleCommandArg_Mode(const std::string &Arg);
+    void HandleCommandArg_Help(const std::string &Arg);
     
     void CommandSelectTrackByIndex(const std::string &ArgIndex);
     bool CommandArgIsInt(const std::string &Arg);
@@ -69,6 +51,7 @@ private: // --- Functions ---
     bool TryNext();
     
     bool TryPlayNextTrackOrFirst();
+    bool TryPlayPrevTrackOrLast();
     bool TryPlayRandomTrack();
     
     void StartAudioSyncThread();
@@ -80,13 +63,8 @@ private: // --- Variables ---
     
     EAudioPlayerState AudioPlayerState;
     EPlaybackMode PlaybackMode;
-    EMenuSection CurrentMenuSection;
     
-    bool bForcePlayAfterSwitch;
     bool bWantExit;
-    bool bWantBackFromLibraryMenu;
-    bool bWantBackFromPlaybackMenu;
-    bool bPrintDebugInfo;
     
     float CurrentVolume;
     

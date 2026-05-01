@@ -9,7 +9,7 @@ class MAudioBackend
 public:
     MAudioBackend();
     
-    void Init(bool bPrintDebugInfo);
+    void Init();
 
     bool PlayTrack(const std::filesystem::path &TrackPath);
     bool ResumeTrack();
@@ -29,7 +29,6 @@ private:
     
     bool LoadBufferFromFile(const std::filesystem::path &InPath);
     
-    bool bPrintDebugInfo;
     sf::SoundBuffer Buffer;
     sf::Sound Sound;
 };

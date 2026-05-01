@@ -1,6 +1,9 @@
 //Developed by AdeptusXIII(c). All Rights Reserved. UCC 1-308 "Without Prejudice".
 #include "Engine.h"
 
+#include "StringTemplates.h"
+#include "Engine/CommandDataTable.h"
+#include "Engine/GlobalParameters.h"
 #include "UI//UISnapshot.h"
 
 #include <iostream>
@@ -13,12 +16,7 @@ MEngine::MEngine()
 {
     AudioPlayerState = EAudioPlayerState::Idle;
     PlaybackMode = EPlaybackMode::LoopAll;
-    CurrentMenuSection = EMenuSection::MainMenu;
-    bForcePlayAfterSwitch = true;
     bWantExit = false;
-    bWantBackFromLibraryMenu = false;
-    bWantBackFromPlaybackMenu = false;
-    bPrintDebugInfo = false;
     CurrentVolume = 100;
     DefaultContentDir = std::getenv("HOME") + std::string("/Music/TAP_content");
     bAudioSyncThreadRunning = false;
@@ -26,11 +24,11 @@ MEngine::MEngine()
 
 void MEngine::Init()
 {
-    std::string VersionNumber = "0.10";
-    std::cout << "TAP - Terminal Audio Player V." << VersionNumber << std::endl;
+    std::string VersionNumber = "0.11";
+    std::cout << stp::msg::ENGINE_INIT_MSG << VersionNumber << std::endl;
     
-    FileManager.Init(bPrintDebugInfo);   
-    AudioBackend.Init(bPrintDebugInfo);
+    FileManager.Init();   
+    AudioBackend.Init();
     
     CreateDefaultContentDir();
     WriteTrackListToTrackLibrary(DefaultContentDir);
@@ -73,18 +71,7 @@ void MEngine::SyncAudioState()
     SetAudioPlayerState(EAudioPlayerState::Idle);
 }
 
-void MEngine::RunMenuLoop() 
-{
-    StartAudioSyncThread();
-    while (!bWantExit)
-    {
-        EMainMenuOption SelectedOption = EMainMenuOption::None;
-        SelectedOption = ShowMainMenuAndGetOption();
-        HandleMainMenuOption(SelectedOption);
-    }
-    StopAudioSyncThread();
-    
-}void MEngine::RunCommandLoop()
+void MEngine::RunCommandLineLoop()
 {
     StartAudioSyncThread();
     while (!bWantExit)
@@ -95,237 +82,6 @@ void MEngine::RunMenuLoop()
     StopAudioSyncThread();
 }
 
-EMainMenuOption MEngine::ShowMainMenuAndGetOption()
-{
-    ConsoleIO.PrintMainMenuAndState(BuildUISnapshotData());
-    
-    int Option = ConsoleIO.ReadIntInRange(0, MAX_MAIN_MENU_OPTION_COUNT, "[TAP::MENU] Enter opt: ");
-    
-    return static_cast<EMainMenuOption>(Option);
-}
-
-ELibraryMenuOption MEngine::ShowLibraryMenuAndGetOption() 
-{
-    ConsoleIO.PrintLibraryMenuAndState(BuildUISnapshotData());
-    
-    int Option = ConsoleIO.ReadIntInRange(0, MAX_LIBRARY_MENU_OPTION_COUNT, "[TAP::LIBRARY] Enter opt: ");
-    
-    return static_cast<ELibraryMenuOption>(Option);
-}
-
-EPlaybackMenuOption MEngine::ShowPlaybackModeMenuAndGetOption() 
-{
-    ConsoleIO.PrintPlaybackModeMenuAndState(BuildUISnapshotData());
-    
-    int Option = ConsoleIO.ReadIntInRange(0, MAX_PLAYBACK_MENU_OPTION_COUNT, "[TAP::PLAYBACK-MODE] Enter opt: ");
-    
-    return static_cast<EPlaybackMenuOption>(Option);
-}
-
-void MEngine::OpenMenuLibrary() 
-{
-    CurrentMenuSection = EMenuSection::LibraryMenu;
-    while (!bWantBackFromLibraryMenu) 
-    {
-        ELibraryMenuOption Option = ELibraryMenuOption::None;
-        Option = ShowLibraryMenuAndGetOption();
-        HandleLibraryMenuOption(Option);
-    }
-    bWantBackFromLibraryMenu = false;
-    CurrentMenuSection = EMenuSection::MainMenu;
-}
-
-void MEngine::OpenMenuPlaybackMode() 
-{
-    CurrentMenuSection = EMenuSection::PlaybackMenu;
-    while (!bWantBackFromPlaybackMenu) 
-    {
-        EPlaybackMenuOption Option = EPlaybackMenuOption::None;
-        Option = ShowPlaybackModeMenuAndGetOption();
-        HandlePlaybackModeMenuOption(Option);
-    }
-    bWantBackFromPlaybackMenu = false;
-    CurrentMenuSection = EMenuSection::MainMenu;
-}
-
-void MEngine::HandleMainMenuOption(EMainMenuOption InOption)
-{
-    switch (InOption)
-    {
-        case EMainMenuOption::Prev:
-            if (!TryPrev()) 
-            {
-                std::cout << std::endl << "[TAP::WARNING] No previous track." << std::endl;
-            }
-            break;
-
-        case EMainMenuOption::Play:
-            if (!TryPlay())
-            {
-                std::cout << std::endl << "[TAP::WARNING] Track is already playing or not selected." << std::endl;
-            }
-            break;
-
-        case EMainMenuOption::Pause:
-            if (!TryPause())
-            {
-                std::cout << std::endl << "[TAP::WARNING] Track is already paused or not playing." << std::endl;
-            }
-            break;
-
-        case EMainMenuOption::Stop:
-            if (!TryStop())
-            {
-                std::cout << std::endl << "[TAP::WARNING] Track is already stopped." << std::endl;
-            }
-            break;
-
-        case EMainMenuOption::Next:
-            if (!TryNext()) 
-            {
-                std::cout << std::endl << "[TAP::WARNING] No next track." << std::endl;
-            }
-            break;
-        
-        case EMainMenuOption::Library:
-            OpenMenuLibrary();
-            break;
-            
-        case EMainMenuOption::PlaybackMode:
-            OpenMenuPlaybackMode();
-            break;    
-            
-        case EMainMenuOption::Exit:
-            if (TryExit()) 
-            {
-                std::cout << std::endl << "[TAP::SHUTDOWN] Exit." << std::endl;
-            }
-            else 
-            {
-                std::cerr << std::endl << "[TAP::ERROR] Unexpected Error. Force exit." << std::endl;
-                bWantExit = true;
-            }
-            break;
-    }
-}
-
-void MEngine::HandleLibraryMenuOption(ELibraryMenuOption InOption)
-{
-    switch (InOption) {
-        case ELibraryMenuOption::List:
-            ConsoleIO.PrintTrackList(BuildUISnapshotData());
-            break;
-            
-        case ELibraryMenuOption::SelectByIndex:
-            MenuSelectTrackByIndex();
-            break;
-            
-        case ELibraryMenuOption::Refresh: 
-            {
-                RefreshTrackLibrary(DefaultContentDir);
-                int TrackCount = 0;
-                {
-                    std::lock_guard<std::mutex> Lock(EngineMutex);
-                    TrackCount = TrackLibrary.GetTrackListSize();
-                }
-                ConsoleIO.PrintTotalTracksNum(TrackCount);
-                break;
-            }
-            
-        case ELibraryMenuOption::Back:
-            bWantBackFromLibraryMenu = true;
-            break;
-    }
-}
-
-void MEngine::HandlePlaybackModeMenuOption(EPlaybackMenuOption InOption) 
-{
-    std::lock_guard<std::mutex> Lock(EngineMutex);
-
-    switch (InOption) 
-    {
-        case EPlaybackMenuOption::Once:
-            AudioBackend.SetLoop(false);
-            PlaybackMode = EPlaybackMode::Once;
-            break;
-            
-        case EPlaybackMenuOption::LoopOne:
-            AudioBackend.SetLoop(true);
-            PlaybackMode = EPlaybackMode::LoopOne;
-            break;
-            
-        case EPlaybackMenuOption::LoopAll:
-            AudioBackend.SetLoop(false);
-            PlaybackMode = EPlaybackMode::LoopAll;
-            break;
-            
-        case EPlaybackMenuOption::LoopShuffle:
-            AudioBackend.SetLoop(false);
-            PlaybackMode = EPlaybackMode::LoopShuffle;
-            break;
-            
-        case EPlaybackMenuOption::Back:
-            bWantBackFromPlaybackMenu = true;
-            break;    
-    }
-}
-
-void MEngine::MenuSelectTrackByIndex() 
-{
-    int TrackLibrarySize = 0;
-    {
-        std::lock_guard<std::mutex> Lock(EngineMutex);
-        
-        if (TrackLibrary.IsEmpty()) return;
-        
-        TrackLibrarySize = TrackLibrary.GetTrackListSize() - 1;
-    }
-    
-    int TrackIndex = ConsoleIO.ReadIntInRange(0, TrackLibrarySize, "Enter index: ");
-    
-    std::lock_guard<std::mutex> Lock(EngineMutex);
-    
-    if (TrackIndex >= TrackLibrary.GetTrackListSize())
-    {
-        std::cout << "[TAP::ERROR] Track index is no longer valid." << std::endl;
-        return;
-    }
-    
-    if (bForcePlayAfterSwitch) 
-    {
-        std::filesystem::path Path = TrackLibrary.GetTrackPathByIndex(TrackIndex);
-        if (Path.empty())
-        {
-            std::cout << "[TAP::ERROR] Track path is empty." << std::endl;
-            return;
-        }
-
-        if (AudioBackend.PlayTrack(Path))
-        {
-            SetAudioPlayerState(EAudioPlayerState::Playing);
-            if (!TrackLibrary.SetCurrentIndex(TrackIndex))
-            {
-                std::cout << "[TAP::ERROR] Failed to set current track index." << std::endl;
-                return;
-            }
-            return;
-        }
-
-        std::cout << "[TAP::ERROR] Error while trying to play file: " << Path.string() <<
-        std::endl;
-    }
-    else 
-    {
-        SetAudioPlayerState(EAudioPlayerState::Idle);
-        AudioBackend.StopTrack();
-        
-        if (!TrackLibrary.SetCurrentIndex(TrackIndex)) 
-        {
-            std::cout << "[TAP::ERROR] Failed to set current track index." << std::endl;
-        }
-    }
-}
-
 void MEngine::HandleCommandPromt(const FCommand &InCommandPrompt)
 {
     switch (InCommandPrompt.Type)
@@ -334,7 +90,7 @@ void MEngine::HandleCommandPromt(const FCommand &InCommandPrompt)
         {
             if (!TryPlay())
             {
-                std::cout << "\n[TAP::WARNING] Track is already playing or not selected.\n\n";
+                std::cout << "\n" << stp::msg::APP_WARNING_MSG << stp::msg::fnc::APP_FNC_TRY_PLAY_MSG <<"\n\n";
             }
             break;
         }
@@ -342,7 +98,7 @@ void MEngine::HandleCommandPromt(const FCommand &InCommandPrompt)
         {
             if (!TryPause())
             {
-                std::cout << "\n[TAP::WARNING] Track is already paused or not playing.\n\n";
+                std::cout << "\n" << stp::msg::APP_WARNING_MSG << stp::msg::fnc::APP_FNC_TRY_PAUSE_MSG << "\n\n";
             }
             break;
         }
@@ -350,7 +106,7 @@ void MEngine::HandleCommandPromt(const FCommand &InCommandPrompt)
         {
             if (!TryStop())
             {
-                std::cout << "\n[TAP::WARNING] Track is already stopped.\n\n";
+                std::cout << "\n" << stp::msg::APP_WARNING_MSG << stp::msg::fnc::APP_FNC_TRY_STOP_MSG << "\n\n";
             }
             break;
         }
@@ -358,7 +114,10 @@ void MEngine::HandleCommandPromt(const FCommand &InCommandPrompt)
         {
             if (!TryNext()) 
             {
-                std::cout << "\n[TAP::WARNING] No next track.\n\n";
+                if (!TryPlayNextTrackOrFirst())
+                {
+                    std::cout << "\n" << stp::msg::APP_WARNING_MSG << stp::msg::fnc::APP_FNC_TRY_NEXT_MSG << "\n\n";
+                }
             }
             break;
         }
@@ -366,7 +125,10 @@ void MEngine::HandleCommandPromt(const FCommand &InCommandPrompt)
         {
             if (!TryPrev()) 
             {
-                std::cout << "\n[TAP::WARNING] No previous track.\n\n";
+                if (!TryPlayPrevTrackOrLast())
+                {
+                    std::cout << "\n" << stp::msg::APP_WARNING_MSG << stp::msg::fnc::APP_FNC_TRY_PREV_MSG << "\n\n";
+                }
             }
             break;
         }
@@ -390,24 +152,30 @@ void MEngine::HandleCommandPromt(const FCommand &InCommandPrompt)
         {
             if (TryExit()) 
             {
-                std::cout << "\n[TAP::SHUTDOWN] Exit.\n\n";
+                std::cout << "\n" << stp::msg::APP_SHUTDOWN_MSG << "\n\n";
             }
             else 
             {
-                std::cerr << "\n[TAP::ERROR] Unexpected Error. Force exit.\n\n";
+                std::cerr << "\n" << stp::msg::APP_ERROR_MSG << stp::msg::fnc::APP_FNC_ERR_UNEXP_MSG <<"\n\n";
                 bWantExit = true;
             }
             break;
         }
         case ECommandType::Help:
         {
+            if (InCommandPrompt.Args.empty())
+            {
+                ConsoleIO.PrintHelp();
+                return;
+            }
+            HandleCommandArg_Help(InCommandPrompt.Args[0]);
             break;
         }
         case ECommandType::Mode:
         {
             if (InCommandPrompt.Args.empty())
             {
-                std::cout << "\n...Too low arguments...\n\n" << std::endl;
+                std::cout << "\n" << stp::msg::fnc::APP_FNC_LOW_ARG_MSG << "\n\n" << std::endl;
                 return;
             }
             HandleCommandArg_Mode(InCommandPrompt.Args[0]);
@@ -417,7 +185,7 @@ void MEngine::HandleCommandPromt(const FCommand &InCommandPrompt)
         {
             if (InCommandPrompt.Args.empty())
             {
-                std::cout << "\n...Too low arguments...\n\n";
+                std::cout << "\n" << stp::msg::fnc::APP_FNC_LOW_ARG_MSG << "\n\n" << std::endl;
                 return;
             }
             CommandSelectTrackByIndex(InCommandPrompt.Args[0]);
@@ -434,12 +202,17 @@ void MEngine::HandleCommandPromt(const FCommand &InCommandPrompt)
             }
             else
             {
-                std::cout << "\n...Too low arguments...\n\n";
+                std::cout << "\n" << stp::msg::fnc::APP_FNC_LOW_ARG_MSG << "\n\n" << std::endl;
             }
             break;
         }
+        case ECommandType::Status:
+        {
+            ConsoleIO.PrintStatus(AudioPlayerState, PlaybackMode, TrackLibrary.GetCurrentTrackName(), CurrentVolume);
+            break;
+        }
         case ECommandType::Unknown:
-            std::cout << "\n[TAP::ERROR] Unknown command.\n\n";
+            std::cout << "\n" << stp::msg::APP_ERROR_MSG << stp::msg::fnc::APP_FNC_UNKNOWN_CMD_MSG << "\n\n";
             break;
     }
 }
@@ -450,30 +223,96 @@ void MEngine::HandleCommandArg_Mode(const std::string &Arg)
     
     std::lock_guard<std::mutex> Lock(EngineMutex);
     {
-        if (Arg == "once")
+        if (Arg == ct::PlaybackModeToArg(EPlaybackMode::Once))
         {
             AudioBackend.SetLoop(false);
             PlaybackMode = EPlaybackMode::Once;
         }
-        else if (Arg == "loop-one")
+        else if (Arg == ct::PlaybackModeToArg(EPlaybackMode::LoopOne))
         {
             AudioBackend.SetLoop(true);
             PlaybackMode = EPlaybackMode::LoopOne;
         }
-        else if (Arg == "loop-all")
+        else if (Arg == ct::PlaybackModeToArg(EPlaybackMode::LoopAll))
         {
             AudioBackend.SetLoop(false);
             PlaybackMode = EPlaybackMode::LoopAll;
         }
-        else if (Arg == "loop-shuffle")
+        else if (Arg == ct::PlaybackModeToArg(EPlaybackMode::LoopShuffle))
         {
             AudioBackend.SetLoop(false);
             PlaybackMode = EPlaybackMode::LoopShuffle;
         }
         else
         {
-            std::cout << "\n[TAP::ERROR] Invalid argument.\n\n";
+            std::cout << "\n" << stp::msg::APP_ERROR_MSG << "\n\n";
         }
+    }
+}
+
+void MEngine::HandleCommandArg_Help(const std::string &Arg)
+{
+    if (Arg.empty()) return;
+    
+    if (Arg == ct::CommandTypeToString(ECommandType::Play))
+    {
+        ConsoleIO.PrintHelpCMD(ECommandType::Play);
+    }
+    else if (Arg == ct::CommandTypeToString(ECommandType::Pause))
+    {
+        ConsoleIO.PrintHelpCMD(ECommandType::Pause);
+    }
+    else if (Arg == ct::CommandTypeToString(ECommandType::Stop))
+    {
+        ConsoleIO.PrintHelpCMD(ECommandType::Stop);
+    }
+    else if (Arg == ct::CommandTypeToString(ECommandType::Next))
+    {
+        ConsoleIO.PrintHelpCMD(ECommandType::Next);
+    }
+    else if (Arg == ct::CommandTypeToString(ECommandType::Prev))
+    {
+        ConsoleIO.PrintHelpCMD(ECommandType::Prev);
+    }
+    else if (Arg == ct::CommandTypeToString(ECommandType::List))
+    {
+        ConsoleIO.PrintHelpCMD(ECommandType::List);
+    }
+    else if (Arg == ct::CommandTypeToString(ECommandType::Refresh))
+    {
+        ConsoleIO.PrintHelpCMD(ECommandType::Refresh);
+    }
+    else if (Arg == ct::CommandTypeToString(ECommandType::Exit))
+    {
+        ConsoleIO.PrintHelpCMD(ECommandType::Exit);
+    }
+    else if (Arg == ct::CommandTypeToString(ECommandType::Help))
+    {
+        ConsoleIO.PrintHelpCMD(ECommandType::Help);
+    }
+    else if (Arg == ct::CommandTypeToString(ECommandType::Mode))
+    {
+        ConsoleIO.PrintHelpCMD(ECommandType::Mode);
+    }
+    else if (Arg == ct::CommandTypeToString(ECommandType::Select))
+    {
+        ConsoleIO.PrintHelpCMD(ECommandType::Select);
+    }
+    else if (Arg == ct::CommandTypeToString(ECommandType::Volume))
+    {
+        ConsoleIO.PrintHelpCMD(ECommandType::Volume);
+    }
+    else if (Arg == ct::CommandTypeToString(ECommandType::Status))
+    {
+        ConsoleIO.PrintHelpCMD(ECommandType::Status);
+    }
+    else if (Arg == ct::CommandTypeToString(ECommandType::Unknown))
+    {
+        return;
+    }
+    else
+    {
+        std::cout << "\n" << stp::msg::APP_HELP_MSG << stp::msg::fnc::APP_FNC_UNKNOWN_HELP_MSG << "\n\n";
     }
 }
 
@@ -481,7 +320,7 @@ void MEngine::CommandSelectTrackByIndex(const std::string &ArgIndex)
 {
     if (!CommandArgIsInt(ArgIndex))
     {
-        std::cout << "\n[TAP::ERROR] Invalid argument.\n\n";
+         std::cout << "\n" << stp::msg::APP_ERROR_MSG << stp::msg::fnc::APP_FNC_INVALID_ARG_MSG << "\n\n";
         return;
     }
     
@@ -493,16 +332,16 @@ void MEngine::CommandSelectTrackByIndex(const std::string &ArgIndex)
             
         if (!bIndexInRange)
         {
-            std::cout << "\n[TAP::WARNING] Invalid index.\n\n";
+            std::cout << "\n" << stp::msg::APP_ERROR_MSG << stp::msg::fnc::APP_FNC_INVALID_INDEX_MSG << "\n\n";
             return;
         }
             
-        if (bForcePlayAfterSwitch) 
+        if (gp::bForcePlayAfterSwitch) 
         {
             std::filesystem::path Path = TrackLibrary.GetTrackPathByIndex(TrackIndex);
             if (Path.empty())
             {
-                std::cout << "\n[TAP::ERROR] Track path is empty.\n\n";
+                std::cout << "\n" << stp::msg::APP_ERROR_MSG << stp::msg::fnc::APP_FNC_PATH_EMPTY_MSG <<"\n\n";
                 return;
             }
 
@@ -511,13 +350,13 @@ void MEngine::CommandSelectTrackByIndex(const std::string &ArgIndex)
                 SetAudioPlayerState(EAudioPlayerState::Playing);
                 if (!TrackLibrary.SetCurrentIndex(TrackIndex))
                 {
-                    std::cout << "\n[TAP::ERROR] Failed to set current track index.\n\n";
+                    std::cout << "\n" << stp::msg::APP_ERROR_MSG << stp::msg::fnc::APP_FNC_FAIL_SET_INDEX_MSG << "\n\n";
                     return;
                 }
                 return;
             }
 
-            std::cout << "\n[TAP::ERROR] Error while trying to play file: " << Path.string() <<
+            std::cout << "\n" << stp::msg::APP_ERROR_MSG << stp::msg::fnc::APP_FNC_ERR_TRY_PLAY_FILE_MSG << Path.string() <<
             std::endl << std::endl;
         }
         else 
@@ -527,7 +366,7 @@ void MEngine::CommandSelectTrackByIndex(const std::string &ArgIndex)
         
             if (!TrackLibrary.SetCurrentIndex(TrackIndex)) 
             {
-                std::cout << "\n[TAP::ERROR] Failed to set current track index.\n\n";
+                std::cout << "\n" << stp::msg::APP_ERROR_MSG << stp::msg::fnc::APP_FNC_FAIL_SET_INDEX_MSG << "\n\n";
             }
         }
     }
@@ -560,19 +399,18 @@ bool MEngine::CommandParseVolume(const std::string& Arg)
         
         if (Pos != Arg.size())
         {
-            std::cout  << "\n[TAP::ERROR] Invalid argument.\n\n";
+            std::cout << "\n" << stp::msg::APP_ERROR_MSG << stp::msg::fnc::APP_FNC_INVALID_ARG_MSG << "\n\n";
             return false;
         }
 
         if (!std::isfinite(Volume))
         {
-            std::cout << "[TAP::ERROR] Invalid argument.\n\n";
+            std::cout << "\n" << stp::msg::APP_ERROR_MSG << stp::msg::fnc::APP_FNC_INVALID_ARG_MSG << "\n\n";
             return false;
         }
 
-        if (Volume < MIN_VOLUME || Volume > MAX_VOLUME)
+        if (Volume < gp::MIN_VOLUME || Volume > gp::MAX_VOLUME)
         {
-            std::cout << "\n[TAP::ERROR] Invalid volume. Use 0..100.\n\n";
             return false;
         }
 
@@ -581,7 +419,7 @@ bool MEngine::CommandParseVolume(const std::string& Arg)
     }
     catch (...)
     {
-        std::cout << "\n[TAP::ERROR] Invalid argument.\n\n";
+        std::cout << "\n" << stp::msg::APP_ERROR_MSG << stp::msg::fnc::APP_FNC_INVALID_ARG_MSG << "\n\n";
     }
     
     return false;
@@ -599,7 +437,7 @@ bool MEngine::CreateDefaultContentDir()
     if (FileManager.CreateDir(DefaultContentDir))
     {
         bCreated = true;
-        if (bPrintDebugInfo) 
+        if (gp::bPrintDebugInfo) 
         {
             std::cout << "[ENGINE] Created default content directory " << DefaultContentDir << std::endl;
         }
@@ -653,7 +491,7 @@ bool MEngine::TryPrev()
     std::lock_guard<std::mutex> Lock(EngineMutex);
     
     std::filesystem::path Path = TrackLibrary.GetPrevTrackPath();
-    if (bForcePlayAfterSwitch && !TrackLibrary.IsEmpty() && !Path.empty())
+    if (gp::bForcePlayAfterSwitch && !TrackLibrary.IsEmpty() && !Path.empty())
     {
         if (AudioBackend.PlayTrack(Path)) 
         {
@@ -663,7 +501,7 @@ bool MEngine::TryPrev()
         }
         else 
         {
-            if (bPrintDebugInfo)
+            if (gp::bPrintDebugInfo)
             {
                 std::cerr << "[ENGINE] Error while trying to play file: " << Path.string() << std::endl ;
             }
@@ -671,7 +509,7 @@ bool MEngine::TryPrev()
         }
     }
     
-    if (!bForcePlayAfterSwitch && !TrackLibrary.IsEmpty() && !Path.empty()) 
+    if (!gp::bForcePlayAfterSwitch && !TrackLibrary.IsEmpty() && !Path.empty()) 
     {
         SetAudioPlayerState(EAudioPlayerState::Idle);
         AudioBackend.StopTrack();
@@ -705,7 +543,7 @@ bool MEngine::TryPlay()
         }
         else 
         {
-            if (bPrintDebugInfo)
+            if (gp::bPrintDebugInfo)
             {
                 std::cerr << "[ENGINE] Error while trying to play file: " << Path.string() << std::endl ;
             }
@@ -756,7 +594,7 @@ bool MEngine::TryNext()
     std::lock_guard<std::mutex> Lock(EngineMutex);
     
     std::filesystem::path Path = TrackLibrary.GetNextTrackPath();
-    if (bForcePlayAfterSwitch && !TrackLibrary.IsEmpty() && !Path.empty())
+    if (gp::bForcePlayAfterSwitch && !TrackLibrary.IsEmpty() && !Path.empty())
     {
         if (AudioBackend.PlayTrack(Path)) 
         {
@@ -766,7 +604,7 @@ bool MEngine::TryNext()
         }
         else 
         {
-            if (bPrintDebugInfo)
+            if (gp::bPrintDebugInfo)
             {
                 std::cerr << "[ENGINE] Error while trying to play file: " << Path.string() << std::endl ;
             }
@@ -774,7 +612,7 @@ bool MEngine::TryNext()
         }
     }
     
-    if (!bForcePlayAfterSwitch && !TrackLibrary.IsEmpty() && !Path.empty()) 
+    if (!gp::bForcePlayAfterSwitch && !TrackLibrary.IsEmpty() && !Path.empty()) 
     {
         SetAudioPlayerState(EAudioPlayerState::Idle);
         AudioBackend.StopTrack();
@@ -800,7 +638,7 @@ bool MEngine::TryPlayNextTrackOrFirst()
             return true;
         }
         
-        std::cout << "[TAP::ERROR] Failed to play first track." << std::endl;
+        std::cout << "\n" << stp::msg::APP_ERROR_MSG << stp::msg::fnc::APP_FNC_FAIL_PLAY_FIRST_MSG << std::endl;
         return false;
     }
     
@@ -811,7 +649,37 @@ bool MEngine::TryPlayNextTrackOrFirst()
         return true;
     }
     
-    std::cout << "[TAP::ERROR] Error while trying to play: " << TrackLibrary.GetCurrentTrackName() << std::endl;
+    std::cout << "\n" << stp::msg::APP_ERROR_MSG << stp::msg::fnc::APP_FNC_ERR_TRY_PLAY_FILE_MSG << TrackLibrary.GetCurrentTrackName() << std::endl;
+    return false;
+}
+
+bool MEngine::TryPlayPrevTrackOrLast()
+{
+    std::lock_guard<std::mutex> Lock(EngineMutex);
+    
+    std::filesystem::path Path = TrackLibrary.GetPrevTrackPath();
+    if (Path.empty() && !TrackLibrary.IsEmpty()) 
+    {
+        std::filesystem::path LastTrackPath = TrackLibrary.GetTrackPathByIndex(TrackLibrary.GetTrackListSize() - 1);
+        if (!LastTrackPath.empty() && AudioBackend.PlayTrack(LastTrackPath))
+        {
+            TrackLibrary.SetCurrentIndex(TrackLibrary.GetTrackListSize() - 1);
+            SetAudioPlayerState(EAudioPlayerState::Playing);
+            return true;
+        }
+        
+        std::cout << "\n" << stp::msg::APP_ERROR_MSG << stp::msg::fnc::APP_FNC_FAIL_PLAY_LAST_MSG << std::endl;
+        return false;
+    }
+    
+    if (AudioBackend.PlayTrack(Path)) 
+    {
+        TrackLibrary.SetNextIndex();
+        SetAudioPlayerState(EAudioPlayerState::Playing);
+        return true;
+    }
+    
+    std::cout << "\n" << stp::msg::APP_ERROR_MSG << stp::msg::fnc::APP_FNC_ERR_TRY_PLAY_FILE_MSG << TrackLibrary.GetCurrentTrackName() << std::endl;
     return false;
 }
 
@@ -821,7 +689,7 @@ bool MEngine::TryPlayRandomTrack()
     
     if (TrackLibrary.IsEmpty()) 
     {
-        std::cout << "[TAP::ERROR] Track library is empty." << std::endl;
+        std::cout << "\n" << stp::msg::APP_ERROR_MSG << stp::msg::fnc::APP_FNC_ERR_LIBRARY_EMPTY_MSG << std::endl;
         return false;
     }
     
@@ -838,7 +706,7 @@ bool MEngine::TryPlayRandomTrack()
             return true;
         }
         
-        std::cout << "[TAP::ERROR] Failed play." << std::endl;
+        std::cout << "\n" << stp::msg::APP_ERROR_MSG << stp::msg::fnc::APP_FNC_FAIL_PLAY_MSG << std::endl;
         return false;
     }
     
@@ -858,7 +726,7 @@ bool MEngine::TryPlayRandomTrack()
         return true;
     }
     
-    std::cout << "[TAP::ERROR] Error while trying to play: " << TrackLibrary.GetCurrentTrackName() << std::endl;
+    std::cout << "\n" << stp::msg::APP_ERROR_MSG << stp::msg::fnc::APP_FNC_ERR_TRY_PLAY_FILE_MSG << TrackLibrary.GetCurrentTrackName() << std::endl;
     return false;
 }
 
@@ -895,7 +763,6 @@ FUISnapshotData MEngine::BuildUISnapshotData()
         
         SnapshotData.AudioPlayerState = AudioPlayerState;
         SnapshotData.PlaybackMode = PlaybackMode;
-        SnapshotData.CurrentMenuSection = CurrentMenuSection;
         SnapshotData.TrackCount = TrackLibrary.GetTrackListSize();
         SnapshotData.CurrentTrackIndex = TrackLibrary.GetCurrentIndex();
         SnapshotData.CurrentTrackName = TrackLibrary.GetCurrentTrackName();
