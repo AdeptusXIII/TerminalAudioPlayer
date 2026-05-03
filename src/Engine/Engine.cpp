@@ -24,7 +24,7 @@ MEngine::MEngine()
 
 void MEngine::Init()
 {
-    std::string VersionNumber = "0.11";
+    std::string VersionNumber = "0.12";
     std::cout << stp::msg::ENGINE_INIT_MSG << VersionNumber << std::endl;
     
     FileManager.Init();   
@@ -77,12 +77,12 @@ void MEngine::RunCommandLineLoop()
     while (!bWantExit)
     {
         FCommand Command = ConsoleIO.ReadCommand();
-        HandleCommandPromt(Command);
+        ExecuteCommandPrompt(Command);
     }
     StopAudioSyncThread();
 }
 
-void MEngine::HandleCommandPromt(const FCommand &InCommandPrompt)
+void MEngine::ExecuteCommandPrompt(const FCommand &InCommandPrompt)
 {
     switch (InCommandPrompt.Type)
     {
@@ -165,50 +165,63 @@ void MEngine::HandleCommandPromt(const FCommand &InCommandPrompt)
         {
             if (InCommandPrompt.Args.empty())
             {
-                ConsoleIO.PrintHelp();
+                ConsoleIO.PrintCommandHelp();
                 return;
             }
-            HandleCommandArg_Help(InCommandPrompt.Args[0]);
+            HandleHelpCommand(InCommandPrompt.Args[0]);
             break;
         }
         case ECommandType::Mode:
         {
             if (InCommandPrompt.Args.empty())
             {
-                std::cout << "\n" << stp::msg::fnc::APP_FNC_LOW_ARG_MSG << "\n\n" << std::endl;
+                std::cout << "\n" << stp::msg::fnc::APP_FNC_LOW_ARG_MSG << "\n\n";
                 return;
             }
-            HandleCommandArg_Mode(InCommandPrompt.Args[0]);
+            HandleModeCommand(InCommandPrompt.Args[0]);
             break;
         }
         case ECommandType::Select:
         {
             if (InCommandPrompt.Args.empty())
             {
-                std::cout << "\n" << stp::msg::fnc::APP_FNC_LOW_ARG_MSG << "\n\n" << std::endl;
+                std::cout << "\n" << stp::msg::fnc::APP_FNC_LOW_ARG_MSG << "\n\n";
                 return;
             }
-            CommandSelectTrackByIndex(InCommandPrompt.Args[0]);
+            HandleSelectCommand(InCommandPrompt.Args[0]);
             break;
         }
         case ECommandType::Volume:
         {
             if (!InCommandPrompt.Args.empty())
             {
-                if (CommandParseVolume(InCommandPrompt.Args[0]))
+                if (HandleVolumeCommand(InCommandPrompt.Args[0]))
                 {
                     ApplyCurrentVolume();
                 }
             }
             else
             {
-                std::cout << "\n" << stp::msg::fnc::APP_FNC_LOW_ARG_MSG << "\n\n" << std::endl;
+                std::cout << "\n" << stp::msg::fnc::APP_FNC_LOW_ARG_MSG << "\n\n";
             }
             break;
         }
         case ECommandType::Status:
         {
-            ConsoleIO.PrintStatus(AudioPlayerState, PlaybackMode, TrackLibrary.GetCurrentTrackName(), CurrentVolume);
+            ConsoleIO.PrintStatus(BuildUISnapshotData());
+            break;
+        }
+        case ECommandType::Find:
+        {
+            if (!InCommandPrompt.Args.empty())
+            {
+                ConsoleIO.PrintFindResults(FindTracksByName(InCommandPrompt.Args[0]));
+            }
+            else
+            {
+                std::cout << stp::msg::APP_ERROR_MSG << stp::msg::fnc::APP_FNC_LOW_ARG_MSG << "\n\n";
+                break;
+            }
             break;
         }
         case ECommandType::Unknown:
@@ -217,28 +230,28 @@ void MEngine::HandleCommandPromt(const FCommand &InCommandPrompt)
     }
 }
 
-void MEngine::HandleCommandArg_Mode(const std::string &Arg)
+void MEngine::HandleModeCommand(const std::string &Arg)
 {
     if (Arg.empty()) return;
     
     std::lock_guard<std::mutex> Lock(EngineMutex);
     {
-        if (Arg == ct::PlaybackModeToArg(EPlaybackMode::Once))
+        if (Arg == ct::PlaybackModeToString(EPlaybackMode::Once))
         {
             AudioBackend.SetLoop(false);
             PlaybackMode = EPlaybackMode::Once;
         }
-        else if (Arg == ct::PlaybackModeToArg(EPlaybackMode::LoopOne))
+        else if (Arg == ct::PlaybackModeToString(EPlaybackMode::LoopOne))
         {
             AudioBackend.SetLoop(true);
             PlaybackMode = EPlaybackMode::LoopOne;
         }
-        else if (Arg == ct::PlaybackModeToArg(EPlaybackMode::LoopAll))
+        else if (Arg == ct::PlaybackModeToString(EPlaybackMode::LoopAll))
         {
             AudioBackend.SetLoop(false);
             PlaybackMode = EPlaybackMode::LoopAll;
         }
-        else if (Arg == ct::PlaybackModeToArg(EPlaybackMode::LoopShuffle))
+        else if (Arg == ct::PlaybackModeToString(EPlaybackMode::LoopShuffle))
         {
             AudioBackend.SetLoop(false);
             PlaybackMode = EPlaybackMode::LoopShuffle;
@@ -250,61 +263,65 @@ void MEngine::HandleCommandArg_Mode(const std::string &Arg)
     }
 }
 
-void MEngine::HandleCommandArg_Help(const std::string &Arg)
+void MEngine::HandleHelpCommand(const std::string &Arg)
 {
     if (Arg.empty()) return;
     
     if (Arg == ct::CommandTypeToString(ECommandType::Play))
     {
-        ConsoleIO.PrintHelpCMD(ECommandType::Play);
+        ConsoleIO.PrintCommandHelpArg(ECommandType::Play);
     }
     else if (Arg == ct::CommandTypeToString(ECommandType::Pause))
     {
-        ConsoleIO.PrintHelpCMD(ECommandType::Pause);
+        ConsoleIO.PrintCommandHelpArg(ECommandType::Pause);
     }
     else if (Arg == ct::CommandTypeToString(ECommandType::Stop))
     {
-        ConsoleIO.PrintHelpCMD(ECommandType::Stop);
+        ConsoleIO.PrintCommandHelpArg(ECommandType::Stop);
     }
     else if (Arg == ct::CommandTypeToString(ECommandType::Next))
     {
-        ConsoleIO.PrintHelpCMD(ECommandType::Next);
+        ConsoleIO.PrintCommandHelpArg(ECommandType::Next);
     }
     else if (Arg == ct::CommandTypeToString(ECommandType::Prev))
     {
-        ConsoleIO.PrintHelpCMD(ECommandType::Prev);
+        ConsoleIO.PrintCommandHelpArg(ECommandType::Prev);
     }
     else if (Arg == ct::CommandTypeToString(ECommandType::List))
     {
-        ConsoleIO.PrintHelpCMD(ECommandType::List);
+        ConsoleIO.PrintCommandHelpArg(ECommandType::List);
     }
     else if (Arg == ct::CommandTypeToString(ECommandType::Refresh))
     {
-        ConsoleIO.PrintHelpCMD(ECommandType::Refresh);
+        ConsoleIO.PrintCommandHelpArg(ECommandType::Refresh);
     }
     else if (Arg == ct::CommandTypeToString(ECommandType::Exit))
     {
-        ConsoleIO.PrintHelpCMD(ECommandType::Exit);
+        ConsoleIO.PrintCommandHelpArg(ECommandType::Exit);
     }
     else if (Arg == ct::CommandTypeToString(ECommandType::Help))
     {
-        ConsoleIO.PrintHelpCMD(ECommandType::Help);
+        ConsoleIO.PrintCommandHelpArg(ECommandType::Help);
     }
     else if (Arg == ct::CommandTypeToString(ECommandType::Mode))
     {
-        ConsoleIO.PrintHelpCMD(ECommandType::Mode);
+        ConsoleIO.PrintCommandHelpArg(ECommandType::Mode);
     }
     else if (Arg == ct::CommandTypeToString(ECommandType::Select))
     {
-        ConsoleIO.PrintHelpCMD(ECommandType::Select);
+        ConsoleIO.PrintCommandHelpArg(ECommandType::Select);
     }
     else if (Arg == ct::CommandTypeToString(ECommandType::Volume))
     {
-        ConsoleIO.PrintHelpCMD(ECommandType::Volume);
+        ConsoleIO.PrintCommandHelpArg(ECommandType::Volume);
     }
     else if (Arg == ct::CommandTypeToString(ECommandType::Status))
     {
-        ConsoleIO.PrintHelpCMD(ECommandType::Status);
+        ConsoleIO.PrintCommandHelpArg(ECommandType::Status);
+    }
+    else if (Arg == ct::CommandTypeToString(ECommandType::Find))
+    {
+        ConsoleIO.PrintCommandHelpArg(ECommandType::Find);
     }
     else if (Arg == ct::CommandTypeToString(ECommandType::Unknown))
     {
@@ -316,7 +333,7 @@ void MEngine::HandleCommandArg_Help(const std::string &Arg)
     }
 }
 
-void MEngine::CommandSelectTrackByIndex(const std::string &ArgIndex)
+void MEngine::HandleSelectCommand(const std::string &ArgIndex)
 {
     if (!CommandArgIsInt(ArgIndex))
     {
@@ -372,23 +389,7 @@ void MEngine::CommandSelectTrackByIndex(const std::string &ArgIndex)
     }
 }
 
-bool MEngine::CommandArgIsInt(const std::string &Arg)
-{
-    if (Arg.empty()) return false;
-
-    try 
-    {
-        size_t Pos;
-        std::stoul(Arg, &Pos);
-        return Pos == Arg.size();
-    }
-    catch (...) 
-    {
-        return false;
-    }
-}
-
-bool MEngine::CommandParseVolume(const std::string& Arg)
+bool MEngine::HandleVolumeCommand(const std::string& Arg)
 {
     if (Arg.empty()) return false;
     
@@ -423,6 +424,22 @@ bool MEngine::CommandParseVolume(const std::string& Arg)
     }
     
     return false;
+}
+
+bool MEngine::CommandArgIsInt(const std::string &Arg)
+{
+    if (Arg.empty()) return false;
+
+    try 
+    {
+        size_t Pos;
+        std::stoul(Arg, &Pos);
+        return Pos == Arg.size();
+    }
+    catch (...) 
+    {
+        return false;
+    }
 }
 
 void MEngine::SetAudioPlayerState(EAudioPlayerState TargetAudioPlayerState)
@@ -470,6 +487,31 @@ void MEngine::RefreshTrackLibrary(const std::filesystem::path &InPath)
 void MEngine::ApplyCurrentVolume()
 {
     AudioBackend.SetVolume(CurrentVolume);
+}
+
+std::vector<std::pair<int, std::string>> MEngine::FindTracksByName(const std::string &Arg)
+{
+    if (Arg.empty()) return {};
+
+    std::vector<std::pair<int, std::string>> FindedTracks = {};
+    std::string Query = Arg;
+    std::transform(Query.begin(), Query.end(), Query.begin(), 
+        [](unsigned char c) { return std::tolower(c); });
+    
+    for (int i = 0; i < TrackLibrary.GetTrackListSize(); i++)
+    {
+        std::string TrackName = TrackLibrary.GetTrackNameByIndex(i);
+        std::string FormattedTrackName = TrackName;
+        std::transform(FormattedTrackName.begin(), FormattedTrackName.end(), FormattedTrackName.begin(), 
+            [](unsigned char c) { return std::tolower(c); });
+
+        if (FormattedTrackName.find(Query) != std::string::npos)
+        {
+            FindedTracks.emplace_back(i, TrackName);
+        }
+    }
+    
+    return FindedTracks;
 }
 
 bool MEngine::TryExit() 
@@ -764,6 +806,7 @@ FUISnapshotData MEngine::BuildUISnapshotData()
         SnapshotData.AudioPlayerState = AudioPlayerState;
         SnapshotData.PlaybackMode = PlaybackMode;
         SnapshotData.TrackCount = TrackLibrary.GetTrackListSize();
+        SnapshotData.CurrentVolume = CurrentVolume;
         SnapshotData.CurrentTrackIndex = TrackLibrary.GetCurrentIndex();
         SnapshotData.CurrentTrackName = TrackLibrary.GetCurrentTrackName();
         

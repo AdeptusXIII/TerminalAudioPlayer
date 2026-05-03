@@ -20,7 +20,8 @@ enum class ECommandType
     Mode,
     Select,
     Volume,
-    Status
+    Status,
+    Find
 };
 
 struct FCommand

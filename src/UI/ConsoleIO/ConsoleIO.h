@@ -19,8 +19,8 @@ struct FHelpEntry
 struct FHelpEntryEXT
 {
     std::vector<std::string> Usage;
-    std::string Description;
-    std::vector<std::string> Example;
+    std::vector<std::string> Description;
+    std::vector<std::string> Examples;
 };
 
 class MConsoleIO 
@@ -28,16 +28,14 @@ class MConsoleIO
 public:
     MConsoleIO();
     
-    // MENU MODE FUNCTIONS
+    FCommand ReadCommand();
+    
     void PrintTrackList(const FUISnapshotData &UISnapshot);
     void PrintTotalTracksNum(const int &InTotalTracks);
-    
-    // COMMAND LINE MODE FUNCTIONS
-    FCommand ReadCommand();
-    void PrintHelp();
-    void PrintHelpCMD(ECommandType CommandType);
-    void PrintStatus(const EAudioPlayerState& AudioPlayerState, EPlaybackMode& PlaybackMode, std::string CurrentTrack, 
-        float CurrentVolume);
+    void PrintCommandHelp();
+    void PrintCommandHelpArg(ECommandType CommandType);
+    void PrintStatus(const FUISnapshotData &UISnapshot);
+    void PrintFindResults(const std::vector<std::pair<int, std::string>> &FindedTracks);
     
 private:
     

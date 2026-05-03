@@ -5,6 +5,7 @@
 #include "Types/PlaybackTypes.h"
 
 #include <vector>
+#include <string>
 
 struct FUISnapshotData 
 {
@@ -13,6 +14,7 @@ struct FUISnapshotData
     
     int TrackCount = -1;
     int CurrentTrackIndex = -1;
+    float CurrentVolume = -1.f;
     
     std::string CurrentTrackName = "None";
     std::vector<std::string> TrackList = {"None"};

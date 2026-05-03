@@ -32,6 +32,7 @@ namespace stp
         constexpr const char* APP_LIBRARY_MSG = "[TAP::LIBRARY] ";
         constexpr const char* APP_HELP_MSG = "[TAP::HELP] ";
         constexpr const char* APP_STATUS_MSG = "[TAP::STATUS] ";
+        constexpr const char* APP_FIND_MSG = "[TAP::FIND] ";
         constexpr const char* APP_SHUTDOWN_MSG = "[TAP::SHUTDOWN] Shutting down...";
     
         /** FUNCTION MESSAGE */
@@ -47,7 +48,7 @@ namespace stp
             constexpr const char* APP_FNC_CUR_TRACK_MSG = " <- current/selected";
             constexpr const char* APP_FNC_ERR_UNEXP_MSG = "Unexpected Error. Force exit.";
             constexpr const char* APP_FNC_ERR_TRY_PLAY_FILE_MSG = "Error while trying to play: ";
-            constexpr const char* APP_FNC_ERR_LIBRARY_EMPTY_MSG = " rack library is empty.";
+            constexpr const char* APP_FNC_ERR_LIBRARY_EMPTY_MSG = "Track library is empty.";
             constexpr const char* APP_FNC_PATH_EMPTY_MSG = "Track path is empty.";
             constexpr const char* APP_FNC_FAIL_SET_INDEX_MSG = "Failed to set current track index.";
             constexpr const char* APP_FNC_FAIL_PLAY_MSG = "Failed play.";

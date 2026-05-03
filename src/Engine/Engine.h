@@ -27,14 +27,14 @@ public:
 
 private: // --- Functions ---
     
-    // COMMAND LINE MODE FUNCTIONS
-    void HandleCommandPromt(const FCommand &InCommandPrompt);
-    void HandleCommandArg_Mode(const std::string &Arg);
-    void HandleCommandArg_Help(const std::string &Arg);
+    void ExecuteCommandPrompt(const FCommand &InCommandPrompt);
     
-    void CommandSelectTrackByIndex(const std::string &ArgIndex);
+    void HandleModeCommand(const std::string &Arg);
+    void HandleHelpCommand(const std::string &Arg);
+    void HandleSelectCommand(const std::string &ArgIndex);
+    bool HandleVolumeCommand(const std::string &Arg);
+    
     bool CommandArgIsInt(const std::string &Arg);
-    bool CommandParseVolume(const std::string &Arg);
     
     // UNIVERSAL FUNCTIONS
     void SetAudioPlayerState(EAudioPlayerState TargetAudioPlayerState);
@@ -42,6 +42,7 @@ private: // --- Functions ---
     void WriteTrackListToTrackLibrary(const std::filesystem::path &InPath);
     void RefreshTrackLibrary(const std::filesystem::path &InPath);
     void ApplyCurrentVolume();
+    std::vector<std::pair<int, std::string>> FindTracksByName(const std::string &Arg);
     
     bool TryExit();
     bool TryPrev();

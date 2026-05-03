@@ -9,37 +9,11 @@
 #include <cmath>
 #include <iomanip>
 #include <iostream>
-#include <limits>
 #include <sstream>
 
 MConsoleIO::MConsoleIO() 
 {
     CommandHelpIdentation = 2;
-}
-
-void MConsoleIO::PrintTrackList(const FUISnapshotData &UISnapshot)
-{
-    std::cout << std::endl;
-    std::cout << stp::msg::fnc::APP_FNC_TOTAL_TRACKS_MSG << UISnapshot.TrackCount << std::endl;
-
-    for (int i = 0; i < UISnapshot.TrackCount; i++)
-    {
-        std::string CurrentTrack = (i == UISnapshot.CurrentTrackIndex) ? stp::msg::fnc::APP_FNC_CUR_TRACK_MSG : "";
-        std::string SubCatTorL = (i == UISnapshot.TrackCount - 1) ? stp::sep::SUBCAT_SEP_L : stp::sep::SUBCAT_SEP_T;
-
-        std::cout << stp::sep::SUBCAT_SEP_TAB + SubCatTorL 
-                  << "Index(" << i << ")" 
-                  << "[" << UISnapshot.TrackList[i] 
-                  << "] "
-                  << CurrentTrack
-                  << std::endl;
-    }
-}
-
-void MConsoleIO::PrintTotalTracksNum(const int &InTotalTracks) 
-{
-    std::cout << stp::msg::APP_LIBRARY_MSG << stp::msg::fnc::APP_FNC_LIB_RESET_MSG 
-              << stp::msg::fnc::APP_FNC_TOTAL_TRACKS_MSG << InTotalTracks << "." << std::endl;
 }
 
 FCommand MConsoleIO::ReadCommand()
@@ -142,41 +116,65 @@ FCommand MConsoleIO::ReadCommand()
         Command.RawInput = Input;
         return Command;
     }
+    if (Tokens[0] == ct::CommandTypeToString(ECommandType::Find)) 
+    {
+        Command.Type = ECommandType::Find;
+        if (Tokens.size() >= 2) Command.Args.emplace_back(Tokens[1]);
+        Command.RawInput = Input;
+        return Command;
+    }
+    
     
     return {};
 }
 
-void MConsoleIO::PrintHelp()
+void MConsoleIO::PrintTrackList(const FUISnapshotData &UISnapshot)
+{
+    std::cout << std::endl;
+    std::cout << stp::msg::fnc::APP_FNC_TOTAL_TRACKS_MSG << UISnapshot.TrackCount << std::endl;
+
+    for (int i = 0; i < UISnapshot.TrackCount; i++)
+    {
+        std::string CurrentTrack = (i == UISnapshot.CurrentTrackIndex) ? stp::msg::fnc::APP_FNC_CUR_TRACK_MSG : "";
+        std::string SubCatTorL = (i == UISnapshot.TrackCount - 1) ? stp::sep::SUBCAT_SEP_L : stp::sep::SUBCAT_SEP_T;
+
+        std::cout << stp::sep::SUBCAT_SEP_TAB + SubCatTorL 
+                  << "Index(" << i << ")" 
+                  << "[" << UISnapshot.TrackList[i] 
+                  << "] "
+                  << CurrentTrack
+                  << std::endl;
+    }
+}
+
+void MConsoleIO::PrintTotalTracksNum(const int &InTotalTracks) 
+{
+    std::cout << stp::msg::APP_LIBRARY_MSG << stp::msg::fnc::APP_FNC_LIB_RESET_MSG 
+              << stp::msg::fnc::APP_FNC_TOTAL_TRACKS_MSG << InTotalTracks << "." << std::endl;
+}
+
+void MConsoleIO::PrintCommandHelp()
 {
     std::vector<FHelpEntry> HelpEntries =
     {
-        { ct::CommandTypeToString(ECommandType::Play) + ct::RequiredArgDataTypeToString(ECommandType::Play),
-            "Resume or start playback" },
-        { ct::CommandTypeToString(ECommandType::Pause) + ct::RequiredArgDataTypeToString(ECommandType::Pause),
-            "Pause current track" },
-        { ct::CommandTypeToString(ECommandType::Stop) + ct::RequiredArgDataTypeToString(ECommandType::Stop),
-            "Stop current track" },
-        { ct::CommandTypeToString(ECommandType::Next) + ct::RequiredArgDataTypeToString(ECommandType::Next),
-            "Play next track" },
-        { ct::CommandTypeToString(ECommandType::Prev) + ct::RequiredArgDataTypeToString(ECommandType::Prev),
-            "Play previous track" },
-        { ct::CommandTypeToString(ECommandType::List) + ct::RequiredArgDataTypeToString(ECommandType::List),
-            "Show track list" },
-        { ct::CommandTypeToString(ECommandType::Refresh) + ct::RequiredArgDataTypeToString(ECommandType::Refresh),
-            "Rescan track library" },
+        { ct::CommandTypeToString(ECommandType::Play), "Resume or start playback" },
+        { ct::CommandTypeToString(ECommandType::Pause), "Pause current track" },
+        { ct::CommandTypeToString(ECommandType::Stop), "Stop current track" },
+        { ct::CommandTypeToString(ECommandType::Next), "Play next track" },
+        { ct::CommandTypeToString(ECommandType::Prev), "Play previous track" },
+        { ct::CommandTypeToString(ECommandType::List), "Show track list" },
+        { ct::CommandTypeToString(ECommandType::Refresh), "Rescan track library" },
         { ct::CommandTypeToString(ECommandType::Mode) + " " + ct::RequiredArgDataTypeToString(ECommandType::Mode),
             "Set playback mode" },
         { ct::CommandTypeToString(ECommandType::Select) + " " + ct::RequiredArgDataTypeToString(ECommandType::Select),
             "Play track by index" },
         { ct::CommandTypeToString(ECommandType::Volume) + " " + ct::RequiredArgDataTypeToString(ECommandType::Volume),
             "Set global player volume" },
-        { ct::CommandTypeToString(ECommandType::Status) + ct::RequiredArgDataTypeToString(ECommandType::Status),
-            "Show player status" },
+        { ct::CommandTypeToString(ECommandType::Status), "Show player status" },
         { ct::CommandTypeToString(ECommandType::Help),"Show this help" },
         { ct::CommandTypeToString(ECommandType::Help) + " " + ct::RequiredArgDataTypeToString(ECommandType::Help),
-        "Show detailed description of <command>" },
-        { ct::CommandTypeToString(ECommandType::Exit) + ct::RequiredArgDataTypeToString(ECommandType::Exit),
-            "Exit player" }
+        "Show detailed description of " + ct::RequiredArgDataTypeToString(ECommandType::Help) },
+        { ct::CommandTypeToString(ECommandType::Exit),"Exit player" }
     };
     
     size_t MaxUsageLen = 0;
@@ -203,7 +201,7 @@ void MConsoleIO::PrintHelp()
     }
 }
 
-void MConsoleIO::PrintHelpCMD(ECommandType CommandType)
+void MConsoleIO::PrintCommandHelpArg(ECommandType CommandType)
 {
     FHelpEntryEXT HelpEntryEXT = {};
     
@@ -212,59 +210,76 @@ void MConsoleIO::PrintHelpCMD(ECommandType CommandType)
         case ECommandType::Play:
         {
             HelpEntryEXT.Usage.emplace_back(ct::CommandTypeToString(ECommandType::Play));
-            HelpEntryEXT.Description = "Resumes or initiates playback of a track.";
-            HelpEntryEXT.Example.emplace_back("play");
+            
+            HelpEntryEXT.Description.emplace_back("Resumes or initiates playback of a track.");
+            
+            HelpEntryEXT.Examples.emplace_back(ct::CommandTypeToString(ECommandType::Play));
             break;
         }
         case ECommandType::Pause:
         {
             HelpEntryEXT.Usage.emplace_back(ct::CommandTypeToString(ECommandType::Pause));
-            HelpEntryEXT.Description = "Pauses the currently active track.";
-            HelpEntryEXT.Example.emplace_back("pause");
+            
+            HelpEntryEXT.Description.emplace_back("Pauses the currently active track.");
+            
+            HelpEntryEXT.Examples.emplace_back(ct::CommandTypeToString(ECommandType::Pause));
             break;
         }
         case ECommandType::Stop:
         {
             HelpEntryEXT.Usage.emplace_back(ct::CommandTypeToString(ECommandType::Stop));
-            HelpEntryEXT.Description = "Stops the currently active track.";
-            HelpEntryEXT.Example.emplace_back("stop");
+            
+            HelpEntryEXT.Description.emplace_back("Stops the currently active track.");
+            
+            HelpEntryEXT.Examples.emplace_back(ct::CommandTypeToString(ECommandType::Stop));
             break;
         }
         case ECommandType::Next:
         {
             HelpEntryEXT.Usage.emplace_back(ct::CommandTypeToString(ECommandType::Next));
-            HelpEntryEXT.Description = "Initiates playback of the next track in the list. If there is no next track,"
-                                       " it initiates playback of the very first track in the list.";
-            HelpEntryEXT.Example.emplace_back("next");
+            
+            HelpEntryEXT.Description .emplace_back("Initiates playback of the next track in the list. "
+                "If there is no next track, it initiates playback of the very first track in the list.");
+            
+            HelpEntryEXT.Examples.emplace_back(ct::CommandTypeToString(ECommandType::Next));
             break;
         }
         case ECommandType::Prev:
         {
             HelpEntryEXT.Usage.emplace_back(ct::CommandTypeToString(ECommandType::Prev));
-            HelpEntryEXT.Description = "Initiates playback of the previous track in the list. If there is no previous track,"
-                                       " it initiates playback of the very last track in the list.";
-            HelpEntryEXT.Example.emplace_back("prev");
+            
+            HelpEntryEXT.Description.emplace_back("Initiates playback of the previous track in the list. "
+                "If there is no previous track, it initiates playback of the very last track in the list.");
+            
+            HelpEntryEXT.Examples.emplace_back(ct::CommandTypeToString(ECommandType::Prev));
             break;
         }
         case ECommandType::List:
         {
             HelpEntryEXT.Usage.emplace_back(ct::CommandTypeToString(ECommandType::List));
-            HelpEntryEXT.Description = "Shows a complete list of known and valid tracks supported by the player.";
-            HelpEntryEXT.Example.emplace_back("list");
+            
+            HelpEntryEXT.Description.emplace_back("Shows a complete list of known and valid tracks supported by the player.");
+            
+            HelpEntryEXT.Examples.emplace_back(ct::CommandTypeToString(ECommandType::List));
             break;
         }
         case ECommandType::Refresh:
         {
             HelpEntryEXT.Usage.emplace_back(ct::CommandTypeToString(ECommandType::Refresh));
-            HelpEntryEXT.Description = "Refreshes the track list. Use this if you've added a new track to the default directory.";
-            HelpEntryEXT.Example.emplace_back("refresh");
+            
+            HelpEntryEXT.Description.emplace_back("Refreshes the track list. Use this if you've added a new track to"
+                "the default directory.");
+            
+            HelpEntryEXT.Examples.emplace_back(ct::CommandTypeToString(ECommandType::Refresh));
             break;
         }
         case ECommandType::Exit:
         {
             HelpEntryEXT.Usage.emplace_back(ct::CommandTypeToString(ECommandType::Exit));
-            HelpEntryEXT.Description = "Immediately terminates the program.";
-            HelpEntryEXT.Example.emplace_back("exit");
+            
+            HelpEntryEXT.Description.emplace_back("Immediately terminates the program.");
+            
+            HelpEntryEXT.Examples.emplace_back(ct::CommandTypeToString(ECommandType::Exit));
             break;
         }
         case ECommandType::Help:
@@ -272,50 +287,88 @@ void MConsoleIO::PrintHelpCMD(ECommandType CommandType)
             HelpEntryEXT.Usage.emplace_back(ct::CommandTypeToString(ECommandType::Help));
             HelpEntryEXT.Usage.emplace_back(ct::CommandTypeToString(ECommandType::Help) + " " + 
                 ct::RequiredArgDataTypeToString(ECommandType::Help));
-            HelpEntryEXT.Description = "Show general help or help for one specific command.";
-            HelpEntryEXT.Example.emplace_back("help");
-            HelpEntryEXT.Example.emplace_back("help volume");
-            HelpEntryEXT.Example.emplace_back("help mode");
+            
+            HelpEntryEXT.Description.emplace_back("Show general help or help for one specific command.");
+            
+            HelpEntryEXT.Examples.emplace_back(ct::CommandTypeToString(ECommandType::Help));
+            HelpEntryEXT.Examples.emplace_back(ct::CommandTypeToString(ECommandType::Help) + " " + 
+                ct::CommandTypeToString(ECommandType::Volume));
+            HelpEntryEXT.Examples.emplace_back(ct::CommandTypeToString(ECommandType::Help) + " " + 
+                ct::CommandTypeToString(ECommandType::Mode));
             break;
         }
         case ECommandType::Mode:
         {
             HelpEntryEXT.Usage.emplace_back(ct::CommandTypeToString(ECommandType::Mode) + " " + 
                 ct::RequiredArgDataTypeToString(ECommandType::Mode));
-            HelpEntryEXT.Description = "Set playback mode for the player.";
-            HelpEntryEXT.Example.emplace_back("mode once");
-            HelpEntryEXT.Example.emplace_back("mode loop-one");
-            HelpEntryEXT.Example.emplace_back("mode loop-all");
-            HelpEntryEXT.Example.emplace_back("mode loop-shuffle");
+            
+            HelpEntryEXT.Description.emplace_back("Set playback mode for the player.");
+            HelpEntryEXT.Description.emplace_back("\nThe <" + ct::PlaybackModeToString(EPlaybackMode::Once) + "> argument "
+                "switches the player to single-play mode. This means the currently active track will play exactly once.");
+            HelpEntryEXT.Description.emplace_back("\nThe <" + ct::PlaybackModeToString(EPlaybackMode::LoopOne) + "> "
+                "argument puts the player into loop mode for the currently active track. This is almost the same as <" + 
+            ct::PlaybackModeToString(EPlaybackMode::Once) + ">, except it plays one specific track repeatedly.");
+            HelpEntryEXT.Description.emplace_back("\nThe <" + ct::PlaybackModeToString(EPlaybackMode::LoopAll) + "> "
+                "argument puts the player into a looped playback mode, playing the track list from start to finish, then "
+                "restarting from the beginning after the last track in the list has played. This creates an endless loop.");
+            HelpEntryEXT.Description.emplace_back("\nThe <" + ct::PlaybackModeToString(EPlaybackMode::LoopShuffle) + "> "
+                "argument puts the player into a looped playback mode of the list of all tracks, but each subsequent "
+                "track is selected randomly.");
+            
+            HelpEntryEXT.Examples.emplace_back(ct::CommandTypeToString(ECommandType::Mode) + " " + 
+                ct::PlaybackModeToString(EPlaybackMode::Once));
+            HelpEntryEXT.Examples.emplace_back(ct::CommandTypeToString(ECommandType::Mode) + " " + 
+                ct::PlaybackModeToString(EPlaybackMode::LoopOne));
+            HelpEntryEXT.Examples.emplace_back(ct::CommandTypeToString(ECommandType::Mode) + " " + 
+                ct::PlaybackModeToString(EPlaybackMode::LoopAll));
+            HelpEntryEXT.Examples.emplace_back(ct::CommandTypeToString(ECommandType::Mode) + " " + 
+                ct::PlaybackModeToString(EPlaybackMode::LoopShuffle));
             break;
         }
         case ECommandType::Select:
         {
             HelpEntryEXT.Usage.emplace_back(ct::CommandTypeToString(ECommandType::Select) + " " + 
                 ct::RequiredArgDataTypeToString(ECommandType::Select));
-            HelpEntryEXT.Description = "Initiates playback of a track by index. Use the list command to get the track index.";
-            HelpEntryEXT.Example.emplace_back("select 5");
-            HelpEntryEXT.Example.emplace_back("select 0");
-            HelpEntryEXT.Example.emplace_back("select 2");
+            
+            HelpEntryEXT.Description.emplace_back("Initiates playback of a track by index. Use the list command to "
+                "get the track index.");
+            
+            HelpEntryEXT.Examples.emplace_back(ct::CommandTypeToString(ECommandType::Select) + " 5");
+            HelpEntryEXT.Examples.emplace_back(ct::CommandTypeToString(ECommandType::Select) + " 0");
+            HelpEntryEXT.Examples.emplace_back(ct::CommandTypeToString(ECommandType::Select) + " 2");
             break;
         }
         case ECommandType::Volume:
         {
             HelpEntryEXT.Usage.emplace_back(ct::CommandTypeToString(ECommandType::Volume) +" " + 
                 ct::RequiredArgDataTypeToString(ECommandType::Volume));
-            HelpEntryEXT.Description = "Sets the global volume modifier as a percentage from "
-            + std::to_string(static_cast<int>(gp::MIN_VOLUME)) + " to " + std::to_string(static_cast<int>(gp::MAX_VOLUME)) + ".";
-            HelpEntryEXT.Example.emplace_back("volume 100");
-            HelpEntryEXT.Example.emplace_back("volume 50");
-            HelpEntryEXT.Example.emplace_back("volume 23.99");
+            
+            HelpEntryEXT.Description.emplace_back("Sets the global volume modifier as a percentage from " +
+                std::to_string(static_cast<int>(gp::MIN_VOLUME)) + " to " + 
+                std::to_string(static_cast<int>(gp::MAX_VOLUME)) + ".");
+            
+            HelpEntryEXT.Examples.emplace_back(ct::CommandTypeToString(ECommandType::Volume) + " 100");
+            HelpEntryEXT.Examples.emplace_back(ct::CommandTypeToString(ECommandType::Volume) + " 50");
+            HelpEntryEXT.Examples.emplace_back(ct::CommandTypeToString(ECommandType::Volume) + " 23.99");
             break;
         }
         case ECommandType::Status:
         {
             HelpEntryEXT.Usage.emplace_back(ct::CommandTypeToString(ECommandType::Status));
-            HelpEntryEXT.Description = "Shows the current state of the player: playback mode, state, current track, "
-                                       "global volume modifier.";
-            HelpEntryEXT.Example.emplace_back("status");
+            HelpEntryEXT.Description.emplace_back("Shows the current state of the player: playback mode, state, "
+                "current track,global volume modifier.");
+            HelpEntryEXT.Examples.emplace_back(ct::CommandTypeToString(ECommandType::Status));
+            break;
+        }
+        case ECommandType::Find:
+        {
+            HelpEntryEXT.Usage.emplace_back(ct::CommandTypeToString(ECommandType::Find) + " " + 
+                ct::RequiredArgDataTypeToString(ECommandType::Find));
+            HelpEntryEXT.Description.emplace_back("Finds tracks whose names contain the " + 
+                ct::RequiredArgDataTypeToString(ECommandType::Find) + " argument and displays a list.");
+            HelpEntryEXT.Examples.emplace_back(ct::CommandTypeToString(ECommandType::Find) + " raskol");
+            HelpEntryEXT.Examples.emplace_back(ct::CommandTypeToString(ECommandType::Find) + " honey");
+            HelpEntryEXT.Examples.emplace_back(ct::CommandTypeToString(ECommandType::Find) + " abb");
             break;
         }
     }
@@ -323,15 +376,19 @@ void MConsoleIO::PrintHelpCMD(ECommandType CommandType)
     std::cout << std::endl << stp::msg::APP_HELP_MSG << ct::CommandTypeToString(CommandType) << std::endl;
     
     std::cout << std::endl << " Usage: " << std::endl;
-    
     for (const auto & Example : HelpEntryEXT.Usage)
     {
         std::cout << "  " << Example << std::endl;
     }
-    std::cout << std::endl << " Description: " << std::endl << "  " << HelpEntryEXT.Description << std::endl << std::endl;
-    std::cout << std::endl << " Examples: "<< std::endl;
     
-    for (const auto & Example : HelpEntryEXT.Example)
+    std::cout << std::endl << " Description: " << std::endl; 
+    for (const auto & Description : HelpEntryEXT.Description)
+    {
+        std::cout << "  " << Description << std::endl;
+    }
+    
+    std::cout << std::endl << " Examples: "<< std::endl;
+    for (const auto & Example : HelpEntryEXT.Examples)
     {
         std::cout << "  " << Example << std::endl;
     }
@@ -339,8 +396,7 @@ void MConsoleIO::PrintHelpCMD(ECommandType CommandType)
     std::cout << std::endl;
 }
 
-void MConsoleIO::PrintStatus(const EAudioPlayerState &AudioPlayerState, EPlaybackMode &PlaybackMode, 
-    std::string CurrentTrack, float CurrentVolume)
+void MConsoleIO::PrintStatus(const FUISnapshotData &UISnapshot)
 {
     std::string State;
     std::string Mode;
@@ -348,7 +404,7 @@ void MConsoleIO::PrintStatus(const EAudioPlayerState &AudioPlayerState, EPlaybac
     
     std::cout << stp::msg::APP_STATUS_MSG << std::endl;
     
-    switch (AudioPlayerState)
+    switch (UISnapshot.AudioPlayerState)
     {
         case EAudioPlayerState::Idle:
         {
@@ -372,7 +428,7 @@ void MConsoleIO::PrintStatus(const EAudioPlayerState &AudioPlayerState, EPlaybac
         }
     }
     
-    switch (PlaybackMode)
+    switch (UISnapshot.PlaybackMode)
     {
         case EPlaybackMode::Once:
         {
@@ -401,19 +457,42 @@ void MConsoleIO::PrintStatus(const EAudioPlayerState &AudioPlayerState, EPlaybac
         }
     }
 
-    if (std::floor(CurrentVolume) == CurrentVolume)
+    if (std::floor(UISnapshot.CurrentVolume) == UISnapshot.CurrentVolume)
     {
-        VolumeStr = std::to_string(static_cast<int>(CurrentVolume));
+        VolumeStr = std::to_string(static_cast<int>(UISnapshot.CurrentVolume));
     }
     else
     {
         std::ostringstream oss;
-        oss << std::fixed << std::setprecision(2) << CurrentVolume;
+        oss << std::fixed << std::setprecision(2) << UISnapshot.CurrentVolume;
         VolumeStr = oss.str();
     }
     
     std::cout << "  State: " << State << std::endl;
     std::cout << "  Playback Mode: " << Mode << std::endl;
-    std::cout << "  Current Track: " << CurrentTrack << std::endl;
+    std::cout << "  Current Track: " << UISnapshot.CurrentTrackName << std::endl;
     std::cout << "  Volume: " << VolumeStr << std::endl;
+}
+
+void MConsoleIO::PrintFindResults(const std::vector<std::pair<int, std::string>> &FindedTracks)
+{
+    if (FindedTracks.empty())
+    {
+        std::cout << "\n" << stp::msg::APP_FIND_MSG << "No matches found.\n\n";
+        return;
+    }
+
+    std::cout << "\n" << stp::msg::APP_FIND_MSG <<  "Results: " << FindedTracks.size() << "\n";
+
+    for (size_t i = 0; i < FindedTracks.size(); i++)
+    {
+        const std::string SubCatTorL = (i == FindedTracks.size() - 1) ? stp::sep::SUBCAT_SEP_L : stp::sep::SUBCAT_SEP_T;
+
+        std::cout << stp::sep::SUBCAT_SEP_TAB << SubCatTorL
+                  << "Index(" << FindedTracks[i].first << ")"
+                  << "[" << FindedTracks[i].second << "]"
+                  << std::endl;
+    }
+
+    std::cout << std::endl;
 }

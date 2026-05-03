@@ -84,6 +84,11 @@ inline std::string CommandTypeToString(ECommandType CommandType)
             StringCommand = "status";
             break;
         }
+        case ECommandType::Find:
+        {
+            StringCommand = "find";
+            break;
+        }
         case ECommandType::Unknown:
         {
             StringCommand = {};
@@ -94,7 +99,7 @@ inline std::string CommandTypeToString(ECommandType CommandType)
     return StringCommand;
 }
 
-inline std::string PlaybackModeToArg(EPlaybackMode PlaybackMode)
+inline std::string PlaybackModeToString(EPlaybackMode PlaybackMode)
 {
     std::string Arg = {};
     
@@ -182,10 +187,10 @@ inline std::string RequiredArgDataTypeToString(ECommandType CommandType)
         }
         case ECommandType::Mode:
         {
-            Arg = "<" + ct::PlaybackModeToArg(EPlaybackMode::Once) + "|" 
-                      + ct::PlaybackModeToArg(EPlaybackMode::LoopOne) + "|"
-                      + ct::PlaybackModeToArg(EPlaybackMode::LoopAll) + "|"
-                      + ct::PlaybackModeToArg(EPlaybackMode::LoopShuffle) + ">";
+            Arg = "<" + ct::PlaybackModeToString(EPlaybackMode::Once) + "|" 
+                      + ct::PlaybackModeToString(EPlaybackMode::LoopOne) + "|"
+                      + ct::PlaybackModeToString(EPlaybackMode::LoopAll) + "|"
+                      + ct::PlaybackModeToString(EPlaybackMode::LoopShuffle) + ">";
             break;
         }
         case ECommandType::Select:
@@ -202,6 +207,11 @@ inline std::string RequiredArgDataTypeToString(ECommandType CommandType)
         case ECommandType::Status:
         {
             Arg = "";
+            break;
+        }
+        case ECommandType::Find:
+        {
+            Arg = "<name>";
             break;
         }
         case ECommandType::Unknown:
