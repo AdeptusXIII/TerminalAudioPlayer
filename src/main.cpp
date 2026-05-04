@@ -6,7 +6,8 @@ int main()
 {
     MEngine Engine;
     Engine.Init();
-    Engine.RunCommandLineLoop();
+    //Engine.RunCommandLineLoop();
+    Engine.TestStatusScreen();
 
     return 0;
 }

@@ -17,6 +17,9 @@ public:
     bool StopTrack();
     
     bool IsStopped() const;
+    float GetTrackDurationSec() const;
+    float GetTrackCurrentOffsetSec() const;
+    float GetTrackRemainingSec() const;
     
     void SetLoop(bool bLoop);
     

@@ -5,10 +5,17 @@
 #include "Types/PlaybackTypes.h"
 #include "Types/CommandTypes.h"
 
+#include <memory>
+#include <ncurses.h>
 #include <string>
 #include <vector>
 
+constexpr int MinimumStatusWindowHeight = 10;
+constexpr int MinimumOutputWindowHeight = 4;
+constexpr int MinimumInputWindowHeight = 3;
+
 struct FUISnapshotData;
+struct FTrackInfo;
 
 struct FHelpEntry
 {
@@ -28,16 +35,69 @@ class MConsoleIO
 public:
     MConsoleIO();
     
-    FCommand ReadCommand();
+    /** NCURSES ConsoleApp-style */
+    //------------------------------------------------------------------------------------------------------------------
+    void InitTUI();
+    void ResizeTUI();
+    void ShutDownTUI();
+    void RenderStatusWindow(const FUISnapshotData& UISnapshot, const FTrackInfo &TrackInfo);
+    void RenderInputWindow(const std::string& InputBuffer);
+    FCommand ParseCommandLine(const std::string &Input);
+    int ReadInputKey();
+    void ScrollOutputWindowVertical(int DeltaLines);
+    void ScrollOutputWindowHorizontal(int DeltaColumns);
+
+    //------------------------------------------------------------------------------------------------------------------
     
+    
+    /** Standard COUT-CommandLine-style */
+    //------------------------------------------------------------------------------------------------------------------
+    FCommand ReadCommand();
     void PrintTrackList(const FUISnapshotData &UISnapshot);
     void PrintTotalTracksNum(const int &InTotalTracks);
     void PrintCommandHelp();
     void PrintCommandHelpArg(ECommandType CommandType);
-    void PrintStatus(const FUISnapshotData &UISnapshot);
+    void PrintStatus(const FUISnapshotData &UISnapshot, const FTrackInfo &TrackInfo);
     void PrintFindResults(const std::vector<std::pair<int, std::string>> &FindedTracks);
+    void PrintOutputMessage(const std::string &Message);
+    //------------------------------------------------------------------------------------------------------------------
     
 private:
     
+    /** NCURSES ConsoleApp-style */
+    //------------------------------------------------------------------------------------------------------------------
+    WINDOW* StatusWindow;
+    WINDOW* OutputWindow;
+    WINDOW* InputWindow;
+    
+    std::vector<std::string> LastOutputLines;
+    
+    int StatusWindowHeight;
+    int OutputWindowHeight;
+    int InputWindowHeight;
+    
+    int OutputVerticalScrollOffset;
+    int OutputHorizontalScrollOffset;
+
+    bool bTUIActive;
+    //------------------------------------------------------------------------------------------------------------------
+    
+    
+    /** Standard COUT-CommandLine-style */
+    //------------------------------------------------------------------------------------------------------------------
     int CommandHelpIdentation;
+    //------------------------------------------------------------------------------------------------------------------
+    
+    
+    /** NCURSES ConsoleApp-style helpers */
+    //------------------------------------------------------------------------------------------------------------------
+    void PrintOutputLines(const std::vector<std::string> &Lines);
+    void RenderOutputWindow();
+    //------------------------------------------------------------------------------------------------------------------
+    
+    
+    /** Standard COUT-CommandLine-style helpers */
+    //------------------------------------------------------------------------------------------------------------------
+    std::string FormatTime(float sec);
+    //------------------------------------------------------------------------------------------------------------------
 };

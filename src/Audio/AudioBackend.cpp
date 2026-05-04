@@ -101,6 +101,23 @@ bool MAudioBackend::IsStopped() const
     return Sound.getStatus() == sf::Sound::Status::Stopped;
 }
 
+float MAudioBackend::GetTrackDurationSec() const
+{
+    return float(Buffer.getDuration().asSeconds());
+}
+
+float MAudioBackend::GetTrackCurrentOffsetSec() const
+{
+    return float(Sound.getPlayingOffset().asSeconds());
+}
+
+float MAudioBackend::GetTrackRemainingSec() const
+{
+    float TotalDurationSec = Buffer.getDuration().asSeconds();
+    float TotalCurrentOffsetSec = Sound.getPlayingOffset().asSeconds();
+    return TotalDurationSec - TotalCurrentOffsetSec;
+}
+
 void MAudioBackend::SetLoop(bool bLoop) 
 {
     Sound.setLoop(bLoop);

@@ -99,30 +99,61 @@ inline std::string CommandTypeToString(ECommandType CommandType)
     return StringCommand;
 }
 
+inline std::string AudioPlayerStateToString(EAudioPlayerState AudioPlayerState)
+{
+    std::string AudioPlayerStateStr = {};
+    
+    switch (AudioPlayerState)
+    {
+        case EAudioPlayerState::Idle:
+        {
+            AudioPlayerStateStr = "Idle";
+            break;
+        }
+        case EAudioPlayerState::Playing:
+        {
+            AudioPlayerStateStr = "Playing";
+            break;
+        }
+        case EAudioPlayerState::Paused:
+        {
+            AudioPlayerStateStr = "Paused";
+            break;
+        }
+        case EAudioPlayerState::None:
+        {
+            AudioPlayerStateStr = "None";
+            break;
+        }
+    }
+    
+    return AudioPlayerStateStr;
+}
+
 inline std::string PlaybackModeToString(EPlaybackMode PlaybackMode)
 {
-    std::string Arg = {};
+    std::string PlaybackModeStr = {};
     
     switch (PlaybackMode)
     {
         case EPlaybackMode::Once:
         {
-            Arg = "once";
+            PlaybackModeStr = "once";
             break;
         }
         case EPlaybackMode::LoopOne:
         {
-            Arg = "loop-one";
+            PlaybackModeStr = "loop-one";
             break;
         }
         case EPlaybackMode::LoopAll:
         {
-            Arg = "loop-all";
+            PlaybackModeStr = "loop-all";
             break;
         }
         case EPlaybackMode::LoopShuffle:
         {
-            Arg = "loop-shuffle";
+            PlaybackModeStr = "loop-shuffle";
             break;
         }
         case EPlaybackMode::None:
@@ -131,7 +162,7 @@ inline std::string PlaybackModeToString(EPlaybackMode PlaybackMode)
         }
     }
         
-    return Arg;
+    return PlaybackModeStr;
 };
 
 inline std::string RequiredArgDataTypeToString(ECommandType CommandType)

@@ -24,7 +24,7 @@ MEngine::MEngine()
 
 void MEngine::Init()
 {
-    std::string VersionNumber = "0.12";
+    std::string VersionNumber = "0.14";
     std::cout << stp::msg::ENGINE_INIT_MSG << VersionNumber << std::endl;
     
     FileManager.Init();   
@@ -82,6 +82,81 @@ void MEngine::RunCommandLineLoop()
     StopAudioSyncThread();
 }
 
+void MEngine::TestStatusScreen()
+{
+    StartAudioSyncThread();
+    ConsoleIO.InitTUI();
+
+    std::string InputBuffer;
+
+    while (!bWantExit)
+    {
+        ConsoleIO.RenderStatusWindow(BuildUISnapshotData(), BuildTrackInfoData());
+        ConsoleIO.RenderInputWindow(InputBuffer);
+
+        const int Ch = ConsoleIO.ReadInputKey();
+
+        if (Ch == ERR)
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(30));
+            continue;
+        }
+
+        if (Ch == '\n' || Ch == KEY_ENTER || Ch == 10 || Ch == 13)
+        {
+            FCommand Command = ConsoleIO.ParseCommandLine(InputBuffer);
+            ExecuteCommandPrompt(Command);
+            InputBuffer.clear();
+        }
+        else if (Ch == KEY_BACKSPACE || Ch == 127 || Ch == 8)
+        {
+            if (!InputBuffer.empty())
+            {
+                InputBuffer.pop_back();
+            }
+        }
+        else if (Ch == KEY_MOUSE || Ch == 27)
+        {
+            int DiscardedCh = ConsoleIO.ReadInputKey();
+            while (DiscardedCh != ERR)
+            {
+                DiscardedCh = ConsoleIO.ReadInputKey();
+            }
+            continue;
+        }
+        else if (Ch == KEY_UP)
+        {
+            ConsoleIO.ScrollOutputWindowVertical(-1);
+        }
+        else if (Ch == KEY_DOWN)
+        {
+            ConsoleIO.ScrollOutputWindowVertical(1);
+        }
+        else if (Ch == KEY_RESIZE)
+        {
+            ConsoleIO.ResizeTUI();
+        }
+        else if (Ch == KEY_LEFT)
+        {
+            ConsoleIO.ScrollOutputWindowHorizontal(-1);
+        }
+        else if (Ch == KEY_RIGHT)
+        {
+            ConsoleIO.ScrollOutputWindowHorizontal(1);
+        }
+
+        else if (Ch >= 32 && Ch <= 126)
+        {
+            InputBuffer.push_back(static_cast<char>(Ch));
+        }
+        
+        std::this_thread::sleep_for(std::chrono::milliseconds(30));
+    }
+
+    ConsoleIO.ShutDownTUI();
+    StopAudioSyncThread();
+}
+
 void MEngine::ExecuteCommandPrompt(const FCommand &InCommandPrompt)
 {
     switch (InCommandPrompt.Type)
@@ -90,7 +165,7 @@ void MEngine::ExecuteCommandPrompt(const FCommand &InCommandPrompt)
         {
             if (!TryPlay())
             {
-                std::cout << "\n" << stp::msg::APP_WARNING_MSG << stp::msg::fnc::APP_FNC_TRY_PLAY_MSG <<"\n\n";
+                ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_WARNING_MSG) + stp::msg::fnc::APP_FNC_TRY_PLAY_MSG);
             }
             break;
         }
@@ -98,7 +173,7 @@ void MEngine::ExecuteCommandPrompt(const FCommand &InCommandPrompt)
         {
             if (!TryPause())
             {
-                std::cout << "\n" << stp::msg::APP_WARNING_MSG << stp::msg::fnc::APP_FNC_TRY_PAUSE_MSG << "\n\n";
+                ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_WARNING_MSG) + stp::msg::fnc::APP_FNC_TRY_PAUSE_MSG);
             }
             break;
         }
@@ -106,7 +181,7 @@ void MEngine::ExecuteCommandPrompt(const FCommand &InCommandPrompt)
         {
             if (!TryStop())
             {
-                std::cout << "\n" << stp::msg::APP_WARNING_MSG << stp::msg::fnc::APP_FNC_TRY_STOP_MSG << "\n\n";
+                ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_WARNING_MSG) + stp::msg::fnc::APP_FNC_TRY_STOP_MSG);
             }
             break;
         }
@@ -116,7 +191,7 @@ void MEngine::ExecuteCommandPrompt(const FCommand &InCommandPrompt)
             {
                 if (!TryPlayNextTrackOrFirst())
                 {
-                    std::cout << "\n" << stp::msg::APP_WARNING_MSG << stp::msg::fnc::APP_FNC_TRY_NEXT_MSG << "\n\n";
+                    ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_WARNING_MSG) + stp::msg::fnc::APP_FNC_TRY_NEXT_MSG);
                 }
             }
             break;
@@ -127,7 +202,7 @@ void MEngine::ExecuteCommandPrompt(const FCommand &InCommandPrompt)
             {
                 if (!TryPlayPrevTrackOrLast())
                 {
-                    std::cout << "\n" << stp::msg::APP_WARNING_MSG << stp::msg::fnc::APP_FNC_TRY_PREV_MSG << "\n\n";
+                    ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_WARNING_MSG) + stp::msg::fnc::APP_FNC_TRY_PREV_MSG);
                 }
             }
             break;
@@ -152,11 +227,11 @@ void MEngine::ExecuteCommandPrompt(const FCommand &InCommandPrompt)
         {
             if (TryExit()) 
             {
-                std::cout << "\n" << stp::msg::APP_SHUTDOWN_MSG << "\n\n";
+                ConsoleIO.PrintOutputMessage(stp::msg::APP_SHUTDOWN_MSG);
             }
             else 
             {
-                std::cerr << "\n" << stp::msg::APP_ERROR_MSG << stp::msg::fnc::APP_FNC_ERR_UNEXP_MSG <<"\n\n";
+                ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR_MSG) + stp::msg::fnc::APP_FNC_ERR_UNEXP_MSG);
                 bWantExit = true;
             }
             break;
@@ -175,7 +250,7 @@ void MEngine::ExecuteCommandPrompt(const FCommand &InCommandPrompt)
         {
             if (InCommandPrompt.Args.empty())
             {
-                std::cout << "\n" << stp::msg::fnc::APP_FNC_LOW_ARG_MSG << "\n\n";
+                ConsoleIO.PrintOutputMessage(stp::msg::fnc::APP_FNC_LOW_ARG_MSG);
                 return;
             }
             HandleModeCommand(InCommandPrompt.Args[0]);
@@ -185,7 +260,7 @@ void MEngine::ExecuteCommandPrompt(const FCommand &InCommandPrompt)
         {
             if (InCommandPrompt.Args.empty())
             {
-                std::cout << "\n" << stp::msg::fnc::APP_FNC_LOW_ARG_MSG << "\n\n";
+                ConsoleIO.PrintOutputMessage(stp::msg::fnc::APP_FNC_LOW_ARG_MSG);
                 return;
             }
             HandleSelectCommand(InCommandPrompt.Args[0]);
@@ -202,13 +277,13 @@ void MEngine::ExecuteCommandPrompt(const FCommand &InCommandPrompt)
             }
             else
             {
-                std::cout << "\n" << stp::msg::fnc::APP_FNC_LOW_ARG_MSG << "\n\n";
+                ConsoleIO.PrintOutputMessage(stp::msg::fnc::APP_FNC_LOW_ARG_MSG);
             }
             break;
         }
         case ECommandType::Status:
         {
-            ConsoleIO.PrintStatus(BuildUISnapshotData());
+            ConsoleIO.PrintStatus(BuildUISnapshotData(), BuildTrackInfoData());
             break;
         }
         case ECommandType::Find:
@@ -219,13 +294,13 @@ void MEngine::ExecuteCommandPrompt(const FCommand &InCommandPrompt)
             }
             else
             {
-                std::cout << stp::msg::APP_ERROR_MSG << stp::msg::fnc::APP_FNC_LOW_ARG_MSG << "\n\n";
+                ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR_MSG) + stp::msg::fnc::APP_FNC_LOW_ARG_MSG);
                 break;
             }
             break;
         }
         case ECommandType::Unknown:
-            std::cout << "\n" << stp::msg::APP_ERROR_MSG << stp::msg::fnc::APP_FNC_UNKNOWN_CMD_MSG << "\n\n";
+            ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR_MSG) + stp::msg::fnc::APP_FNC_UNKNOWN_CMD_MSG);
             break;
     }
 }
@@ -258,7 +333,7 @@ void MEngine::HandleModeCommand(const std::string &Arg)
         }
         else
         {
-            std::cout << "\n" << stp::msg::APP_ERROR_MSG << "\n\n";
+            ConsoleIO.PrintOutputMessage(stp::msg::APP_ERROR_MSG);
         }
     }
 }
@@ -329,7 +404,7 @@ void MEngine::HandleHelpCommand(const std::string &Arg)
     }
     else
     {
-        std::cout << "\n" << stp::msg::APP_HELP_MSG << stp::msg::fnc::APP_FNC_UNKNOWN_HELP_MSG << "\n\n";
+        ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_HELP_MSG) + stp::msg::fnc::APP_FNC_UNKNOWN_HELP_MSG);
     }
 }
 
@@ -337,7 +412,7 @@ void MEngine::HandleSelectCommand(const std::string &ArgIndex)
 {
     if (!CommandArgIsInt(ArgIndex))
     {
-         std::cout << "\n" << stp::msg::APP_ERROR_MSG << stp::msg::fnc::APP_FNC_INVALID_ARG_MSG << "\n\n";
+         ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR_MSG) + stp::msg::fnc::APP_FNC_INVALID_ARG_MSG);
         return;
     }
     
@@ -349,7 +424,7 @@ void MEngine::HandleSelectCommand(const std::string &ArgIndex)
             
         if (!bIndexInRange)
         {
-            std::cout << "\n" << stp::msg::APP_ERROR_MSG << stp::msg::fnc::APP_FNC_INVALID_INDEX_MSG << "\n\n";
+            ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR_MSG) + stp::msg::fnc::APP_FNC_INVALID_INDEX_MSG);
             return;
         }
             
@@ -358,7 +433,7 @@ void MEngine::HandleSelectCommand(const std::string &ArgIndex)
             std::filesystem::path Path = TrackLibrary.GetTrackPathByIndex(TrackIndex);
             if (Path.empty())
             {
-                std::cout << "\n" << stp::msg::APP_ERROR_MSG << stp::msg::fnc::APP_FNC_PATH_EMPTY_MSG <<"\n\n";
+                ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR_MSG) + stp::msg::fnc::APP_FNC_PATH_EMPTY_MSG);
                 return;
             }
 
@@ -367,14 +442,13 @@ void MEngine::HandleSelectCommand(const std::string &ArgIndex)
                 SetAudioPlayerState(EAudioPlayerState::Playing);
                 if (!TrackLibrary.SetCurrentIndex(TrackIndex))
                 {
-                    std::cout << "\n" << stp::msg::APP_ERROR_MSG << stp::msg::fnc::APP_FNC_FAIL_SET_INDEX_MSG << "\n\n";
+                    ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR_MSG) + stp::msg::fnc::APP_FNC_FAIL_SET_INDEX_MSG);
                     return;
                 }
                 return;
             }
 
-            std::cout << "\n" << stp::msg::APP_ERROR_MSG << stp::msg::fnc::APP_FNC_ERR_TRY_PLAY_FILE_MSG << Path.string() <<
-            std::endl << std::endl;
+            ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR_MSG) + stp::msg::fnc::APP_FNC_ERR_TRY_PLAY_FILE_MSG + Path.string());
         }
         else 
         {
@@ -383,7 +457,7 @@ void MEngine::HandleSelectCommand(const std::string &ArgIndex)
         
             if (!TrackLibrary.SetCurrentIndex(TrackIndex)) 
             {
-                std::cout << "\n" << stp::msg::APP_ERROR_MSG << stp::msg::fnc::APP_FNC_FAIL_SET_INDEX_MSG << "\n\n";
+                ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR_MSG) + stp::msg::fnc::APP_FNC_FAIL_SET_INDEX_MSG);
             }
         }
     }
@@ -400,18 +474,19 @@ bool MEngine::HandleVolumeCommand(const std::string& Arg)
         
         if (Pos != Arg.size())
         {
-            std::cout << "\n" << stp::msg::APP_ERROR_MSG << stp::msg::fnc::APP_FNC_INVALID_ARG_MSG << "\n\n";
+            ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR_MSG) + stp::msg::fnc::APP_FNC_INVALID_ARG_MSG);
             return false;
         }
 
         if (!std::isfinite(Volume))
         {
-            std::cout << "\n" << stp::msg::APP_ERROR_MSG << stp::msg::fnc::APP_FNC_INVALID_ARG_MSG << "\n\n";
+            ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR_MSG) + stp::msg::fnc::APP_FNC_INVALID_ARG_MSG);
             return false;
         }
 
         if (Volume < gp::MIN_VOLUME || Volume > gp::MAX_VOLUME)
         {
+            ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR_MSG) + stp::msg::fnc::APP_FNC_INVALID_ARG_MSG);
             return false;
         }
 
@@ -420,7 +495,7 @@ bool MEngine::HandleVolumeCommand(const std::string& Arg)
     }
     catch (...)
     {
-        std::cout << "\n" << stp::msg::APP_ERROR_MSG << stp::msg::fnc::APP_FNC_INVALID_ARG_MSG << "\n\n";
+        ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR_MSG) + stp::msg::fnc::APP_FNC_INVALID_ARG_MSG);
     }
     
     return false;
@@ -680,7 +755,7 @@ bool MEngine::TryPlayNextTrackOrFirst()
             return true;
         }
         
-        std::cout << "\n" << stp::msg::APP_ERROR_MSG << stp::msg::fnc::APP_FNC_FAIL_PLAY_FIRST_MSG << std::endl;
+        ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR_MSG) + stp::msg::fnc::APP_FNC_FAIL_PLAY_FIRST_MSG);
         return false;
     }
     
@@ -691,7 +766,7 @@ bool MEngine::TryPlayNextTrackOrFirst()
         return true;
     }
     
-    std::cout << "\n" << stp::msg::APP_ERROR_MSG << stp::msg::fnc::APP_FNC_ERR_TRY_PLAY_FILE_MSG << TrackLibrary.GetCurrentTrackName() << std::endl;
+    ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR_MSG) + stp::msg::fnc::APP_FNC_ERR_TRY_PLAY_FILE_MSG + TrackLibrary.GetCurrentTrackName());
     return false;
 }
 
@@ -710,7 +785,7 @@ bool MEngine::TryPlayPrevTrackOrLast()
             return true;
         }
         
-        std::cout << "\n" << stp::msg::APP_ERROR_MSG << stp::msg::fnc::APP_FNC_FAIL_PLAY_LAST_MSG << std::endl;
+        ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR_MSG) + stp::msg::fnc::APP_FNC_FAIL_PLAY_LAST_MSG);
         return false;
     }
     
@@ -721,7 +796,7 @@ bool MEngine::TryPlayPrevTrackOrLast()
         return true;
     }
     
-    std::cout << "\n" << stp::msg::APP_ERROR_MSG << stp::msg::fnc::APP_FNC_ERR_TRY_PLAY_FILE_MSG << TrackLibrary.GetCurrentTrackName() << std::endl;
+    ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR_MSG) + stp::msg::fnc::APP_FNC_ERR_TRY_PLAY_FILE_MSG + TrackLibrary.GetCurrentTrackName());
     return false;
 }
 
@@ -731,7 +806,7 @@ bool MEngine::TryPlayRandomTrack()
     
     if (TrackLibrary.IsEmpty()) 
     {
-        std::cout << "\n" << stp::msg::APP_ERROR_MSG << stp::msg::fnc::APP_FNC_ERR_LIBRARY_EMPTY_MSG << std::endl;
+        ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR_MSG) + stp::msg::fnc::APP_FNC_ERR_LIBRARY_EMPTY_MSG);
         return false;
     }
     
@@ -748,7 +823,7 @@ bool MEngine::TryPlayRandomTrack()
             return true;
         }
         
-        std::cout << "\n" << stp::msg::APP_ERROR_MSG << stp::msg::fnc::APP_FNC_FAIL_PLAY_MSG << std::endl;
+        ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR_MSG) + stp::msg::fnc::APP_FNC_FAIL_PLAY_MSG);
         return false;
     }
     
@@ -768,7 +843,7 @@ bool MEngine::TryPlayRandomTrack()
         return true;
     }
     
-    std::cout << "\n" << stp::msg::APP_ERROR_MSG << stp::msg::fnc::APP_FNC_ERR_TRY_PLAY_FILE_MSG << TrackLibrary.GetCurrentTrackName() << std::endl;
+    ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR_MSG) + stp::msg::fnc::APP_FNC_ERR_TRY_PLAY_FILE_MSG + TrackLibrary.GetCurrentTrackName());
     return false;
 }
 
@@ -806,8 +881,8 @@ FUISnapshotData MEngine::BuildUISnapshotData()
         SnapshotData.AudioPlayerState = AudioPlayerState;
         SnapshotData.PlaybackMode = PlaybackMode;
         SnapshotData.TrackCount = TrackLibrary.GetTrackListSize();
-        SnapshotData.CurrentVolume = CurrentVolume;
-        SnapshotData.CurrentTrackIndex = TrackLibrary.GetCurrentIndex();
+        SnapshotData.Volume = CurrentVolume;
+        SnapshotData.TrackIndex = TrackLibrary.GetCurrentIndex();
         SnapshotData.CurrentTrackName = TrackLibrary.GetCurrentTrackName();
         
         std::vector<std::string> TrackNames;
@@ -821,4 +896,15 @@ FUISnapshotData MEngine::BuildUISnapshotData()
     }
     
     return SnapshotData;
+}
+
+FTrackInfo MEngine::BuildTrackInfoData()
+{
+    FTrackInfo TrackInfo = {};
+    
+    TrackInfo.DurationSec = AudioBackend.GetTrackDurationSec();
+    TrackInfo.PositionSec = AudioBackend.GetTrackCurrentOffsetSec();
+    TrackInfo.RemainingSec = AudioBackend.GetTrackRemainingSec();
+    
+    return TrackInfo;
 }

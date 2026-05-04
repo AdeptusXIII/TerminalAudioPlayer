@@ -15,6 +15,7 @@
 #include <mutex>
 
 struct FUISnapshotData;
+struct FTrackInfo;
 
 class MEngine 
 {
@@ -24,6 +25,7 @@ public:
     void Init();
     void SyncAudioState();
     void RunCommandLineLoop();
+    void TestStatusScreen();
 
 private: // --- Functions ---
     
@@ -59,6 +61,7 @@ private: // --- Functions ---
     void StopAudioSyncThread();
     
     FUISnapshotData BuildUISnapshotData();
+    FTrackInfo BuildTrackInfoData();
 
 private: // --- Variables ---
     
