@@ -47,7 +47,6 @@ page.
   ./terminal_player
   ```
 
-You must place audio files inside the folder.
 When you first launch the player, it automatically creates a directory with content and scans it:
 
   ```bash
@@ -55,6 +54,12 @@ When you first launch the player, it automatically creates a directory with cont
   ```
 
 Put your audio files there before running the player.
+
+## How To Use?
+
+- You must place audio files inside the working folder(~/Music/TAP_content).
+- Just type help. The program supports scrolling using the arrow keys. 
+
 
 ## Install Locally
 
