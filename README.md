@@ -53,7 +53,7 @@ When you first launch the player, it automatically creates a directory with cont
   ~/Music/TAP_content
   ```
 
-Put your audio files there before running the player.
+Put your audio files there, then just type <refresh> or restart program.
 
 ## How To Use?
 
