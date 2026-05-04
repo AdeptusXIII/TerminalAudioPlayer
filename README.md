@@ -4,19 +4,19 @@ Terminal Audio Player is a small C++ learning project.
 
 The goal is to build a terminal-based audio player while practicing basic software
 architecture:
-input handling, command processing, state management, track library scanning, and audio
+input handling, ui, command processing, state management, track library scanning, and audio
 playback.
 
 ## Current Features
 
-- Terminal menu
-- Main menu and library submenu
+- Terminal UI (ncurses)
 - Track scanning from `~/Music/TAP_content`
 - Audio file filtering
 - Track list
 - Select track by index
 - Play, pause, resume, stop
 - Next and previous track
+- Track status
 - Refresh track library
 - SFML Audio backend
 
@@ -31,10 +31,11 @@ playback.
 - C++17
 - CMake
 - SFML Audio
+- ncurses
 
 ## Status
 
-Learning project. Architecture and behavior are still evolving.
+MVP
 
 ## License
 
