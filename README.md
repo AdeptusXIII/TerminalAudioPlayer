@@ -2,10 +2,8 @@
 
 Terminal Audio Player is a small C++ learning project.
 
-The goal is to build a terminal-based audio player while practicing basic software
-architecture:
-input handling, ui, command processing, state management, track library scanning, and audio
-playback.
+The goal is to build a terminal-based audio player while practicing basic software architecture:
+input handling, UI, command processing, state management, track library scanning, and audio playback.
 
 ## Current Features
 
@@ -20,11 +18,12 @@ playback.
 - Refresh track library
 - SFML Audio backend
 
-## Supported formats
-- .MP3
-- .WAV
-- .OGG
-- .FLAC
+## Supported Formats
+
+- `.mp3`
+- `.wav`
+- `.ogg`
+- `.flac`
 
 ## Tech
 
@@ -36,6 +35,38 @@ playback.
 ## Status
 
 MVP
+
+## How To Run
+
+Download the latest Linux binary from the [Releases](https://github.com/AdeptusXIII/TerminalAudioPlayer/releases)
+page.
+
+  ```bash
+  cd ~/Downloads
+  chmod +x terminal_player
+  ./terminal_player
+  ```
+
+You must place audio files inside the folder.
+When you first launch the player, it automatically creates a directory with content and scans it:
+
+  ```bash
+  ~/Music/TAP_content
+  ```
+
+Put your audio files there before running the player.
+
+## Install Locally
+
+Download the latest Linux binary from the [Releases](https://github.com/AdeptusXIII/TerminalAudioPlayer/releases)
+page.
+
+  ```bash
+  mkdir -p ~/.local/bin
+  mv ~/Downloads/terminal_player ~/.local/bin/terminal_player
+  chmod +x ~/.local/bin/terminal_player
+  terminal_player
+  ```
 
 ## License
 
