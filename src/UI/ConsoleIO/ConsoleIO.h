@@ -10,6 +10,8 @@
 #include <string>
 #include <vector>
 
+constexpr int MinimumTerminalWidth = 72;
+constexpr int MinimumTerminalHeight = 18;
 constexpr int MinimumStatusWindowHeight = 10;
 constexpr int MinimumOutputWindowHeight = 4;
 constexpr int MinimumInputWindowHeight = 3;
@@ -46,6 +48,7 @@ public:
     int ReadInputKey();
     void ScrollOutputWindowVertical(int DeltaLines);
     void ScrollOutputWindowHorizontal(int DeltaColumns);
+    bool GetTerminalTooSmall() const { return bTerminalTooSmall; }
 
     //------------------------------------------------------------------------------------------------------------------
     
@@ -80,6 +83,7 @@ private:
     int OutputHorizontalScrollOffset;
 
     bool bTUIActive;
+    bool bTerminalTooSmall;
     //------------------------------------------------------------------------------------------------------------------
     
     
@@ -91,8 +95,10 @@ private:
     
     /** NCURSES ConsoleApp-style helpers */
     //------------------------------------------------------------------------------------------------------------------
+    void DeleteTUIWindows();
     void PrintOutputLines(const std::vector<std::string> &Lines);
     void RenderOutputWindow();
+    bool IsTerminalTooSmall(int Width, int Height);
     //------------------------------------------------------------------------------------------------------------------
     
     

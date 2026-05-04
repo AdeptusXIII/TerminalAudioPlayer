@@ -25,7 +25,7 @@ public:
     void Init();
     void SyncAudioState();
     void RunCommandLineLoop();
-    void TestStatusScreen();
+    void RunTUILoop();
 
 private: // --- Functions ---
     

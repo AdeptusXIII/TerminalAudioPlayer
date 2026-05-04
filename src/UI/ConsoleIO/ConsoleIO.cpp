@@ -23,8 +23,9 @@ MConsoleIO::MConsoleIO()
     InputWindowHeight = MinimumInputWindowHeight;
     OutputVerticalScrollOffset = 0;
     OutputHorizontalScrollOffset = 0;
-    CommandHelpIdentation = static_cast<int>(std::strlen(stp::sep::SUBCAT_SEP_TAB));
     bTUIActive = false;
+    bTerminalTooSmall = false;
+    CommandHelpIdentation = static_cast<int>(std::strlen(stp::sep::SUBCAT_SEP_TAB));
 }
 
 void MConsoleIO::InitTUI()
@@ -34,9 +35,22 @@ void MConsoleIO::InitTUI()
     noecho(); // символы не печатаются автоматически
     curs_set(1); //курсор виден
 
+    bTUIActive = true;
+    
     int MaxY = 0;
     int MaxX = 0;
     getmaxyx(stdscr, MaxY, MaxX);
+    
+    bTerminalTooSmall = IsTerminalTooSmall(MaxX, MaxY);
+    if (bTerminalTooSmall)
+    {
+        clear();
+        mvprintw(1, 2, "Terminal too small");
+        mvprintw(2, 2, "Minimum size: %dx%d", MinimumTerminalWidth, MinimumTerminalHeight);
+        mvprintw(3, 2, "Current size: %dx%d", MaxX, MaxY);
+        refresh();
+        return;
+    }
 
     if (StatusWindowHeight + InputWindowHeight >= MaxY)
     {
@@ -60,31 +74,13 @@ void MConsoleIO::InitTUI()
 
     keypad(InputWindow, TRUE);
     nodelay(InputWindow, TRUE);
-
-    bTUIActive = true;
 }
 
 void MConsoleIO::ResizeTUI()
 {
     if (!bTUIActive) return;
     
-    if (StatusWindow != nullptr)
-    {
-        delwin(StatusWindow);
-        StatusWindow = nullptr;
-    }
-    
-    if (OutputWindow != nullptr)
-    {
-        delwin(OutputWindow);
-        OutputWindow = nullptr;
-    }
-    
-    if (InputWindow != nullptr)
-    {
-        delwin(InputWindow);
-        InputWindow = nullptr;
-    }
+    DeleteTUIWindows();
     
     clear();
     refresh();
@@ -92,6 +88,18 @@ void MConsoleIO::ResizeTUI()
     int MaxX = 0;
     int MaxY = 0;
     getmaxyx(stdscr, MaxY, MaxX);
+    
+    bTerminalTooSmall = IsTerminalTooSmall(MaxX, MaxY);
+
+    if (bTerminalTooSmall)
+    {
+        clear();
+        mvprintw(1, 2, "Terminal too small");
+        mvprintw(2, 2, "Minimum size: %dx%d", MinimumTerminalWidth, MinimumTerminalHeight);
+        mvprintw(3, 2, "Current size: %dx%d", MaxX, MaxY);
+        refresh();
+        return;
+    }
     
     StatusWindowHeight = MinimumStatusWindowHeight;
     InputWindowHeight = MinimumInputWindowHeight;
@@ -259,6 +267,10 @@ FCommand MConsoleIO::ParseCommandLine(const std::string &Input)
 
 int MConsoleIO::ReadInputKey()
 {
+    if (InputWindow == nullptr)
+    {
+        return getch();
+    }
     return wgetch(InputWindow);
 }
 
@@ -822,6 +834,18 @@ void MConsoleIO::PrintOutputMessage(const std::string &Message)
     PrintOutputLines({ Message });
 }
 
+void MConsoleIO::DeleteTUIWindows()
+{
+    delwin(StatusWindow);
+    StatusWindow = nullptr;
+    
+    delwin(OutputWindow);
+    OutputWindow = nullptr;
+    
+    delwin(InputWindow);
+    InputWindow = nullptr;
+}
+
 void MConsoleIO::PrintOutputLines(const std::vector<std::string> &Lines)
 {
     LastOutputLines = Lines;
@@ -881,6 +905,11 @@ void MConsoleIO::RenderOutputWindow()
     }
     
     wrefresh(OutputWindow);
+}
+
+bool MConsoleIO::IsTerminalTooSmall(int Width, int Height)
+{
+    return Width < MinimumTerminalWidth || Height < MinimumTerminalHeight;
 }
 
 std::string MConsoleIO::FormatTime(float sec)

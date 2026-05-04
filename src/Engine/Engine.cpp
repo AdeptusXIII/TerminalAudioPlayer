@@ -82,7 +82,7 @@ void MEngine::RunCommandLineLoop()
     StopAudioSyncThread();
 }
 
-void MEngine::TestStatusScreen()
+void MEngine::RunTUILoop()
 {
     StartAudioSyncThread();
     ConsoleIO.InitTUI();
@@ -91,6 +91,19 @@ void MEngine::TestStatusScreen()
 
     while (!bWantExit)
     {
+        if (ConsoleIO.GetTerminalTooSmall())
+        {
+            const int Ch = ConsoleIO.ReadInputKey();
+
+            if (Ch == KEY_RESIZE)
+            {
+                ConsoleIO.ResizeTUI();
+            }
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(30));
+            continue;
+        }
+    
         ConsoleIO.RenderStatusWindow(BuildUISnapshotData(), BuildTrackInfoData());
         ConsoleIO.RenderInputWindow(InputBuffer);
 
