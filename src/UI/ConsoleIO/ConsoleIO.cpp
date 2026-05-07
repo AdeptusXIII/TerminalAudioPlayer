@@ -7,6 +7,7 @@
 #include "Engine/Engine.h"
 #include "Engine/StringTemplates.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstring>
 #include <iomanip>
@@ -45,9 +46,9 @@ void MConsoleIO::InitTUI()
     if (bTerminalTooSmall)
     {
         clear();
-        mvprintw(1, 2, "Terminal too small");
-        mvprintw(2, 2, "Minimum size: %dx%d", MinimumTerminalWidth, MinimumTerminalHeight);
-        mvprintw(3, 2, "Current size: %dx%d", MaxX, MaxY);
+        mvprintw(1, 2, "TERMINAL TOO SMALL");
+        mvprintw(2, 2, "MINIMUM SIZE: %dx%d", MinimumTerminalWidth, MinimumTerminalHeight);
+        mvprintw(3, 2, "CURRENT SIZE: %dx%d", MaxX, MaxY);
         refresh();
         return;
     }
@@ -90,13 +91,12 @@ void MConsoleIO::ResizeTUI()
     getmaxyx(stdscr, MaxY, MaxX);
     
     bTerminalTooSmall = IsTerminalTooSmall(MaxX, MaxY);
-
     if (bTerminalTooSmall)
     {
         clear();
-        mvprintw(1, 2, "Terminal too small");
-        mvprintw(2, 2, "Minimum size: %dx%d", MinimumTerminalWidth, MinimumTerminalHeight);
-        mvprintw(3, 2, "Current size: %dx%d", MaxX, MaxY);
+        mvprintw(1, 2, "TERMINAL TOO SMALL");
+        mvprintw(2, 2, "MINIMUM SIZE: %dx%d", MinimumTerminalWidth, MinimumTerminalHeight);
+        mvprintw(3, 2, "CURRENT SIZE: %dx%d", MaxX, MaxY);
         refresh();
         return;
     }
@@ -159,16 +159,23 @@ void MConsoleIO::RenderStatusWindow(const FUISnapshotData &UISnapshot, const FTr
 {
     werase(StatusWindow);
     box(StatusWindow, 0, 0);
-
-    mvwprintw(StatusWindow, 1, 2, stp::msg::APP_STATUS_MSG);
-    mvwprintw(StatusWindow, 2, 2, "[State: %s]", ct::AudioPlayerStateToString(UISnapshot.AudioPlayerState).c_str());
-    mvwprintw(StatusWindow, 3, 2, "[Playback Mode: %s]", ct::PlaybackModeToString(UISnapshot.PlaybackMode).c_str());
-    mvwprintw(StatusWindow, 4, 2, "[Current Track: %s]", UISnapshot.CurrentTrackName.c_str());
-    mvwprintw(StatusWindow, 5, 2, "[Duration: %s]", FormatTime(TrackInfo.DurationSec).c_str());
-    mvwprintw(StatusWindow, 6, 2, "[Position: %s]", FormatTime(TrackInfo.PositionSec).c_str());
-    mvwprintw(StatusWindow, 7, 2, "[Remaining: %s]", FormatTime(TrackInfo.RemainingSec).c_str());
-    mvwprintw(StatusWindow, 8, 2, "[Volume: %s/%s]", std::to_string(static_cast<int>(gp::MIN_VOLUME)).c_str(),
-        std::to_string(static_cast<int>(UISnapshot.Volume)).c_str());
+    
+    std::string ProgressBar = BuildProgressBar(TrackInfo.PositionSec, TrackInfo.DurationSec, 20);
+    
+    mvwprintw(StatusWindow, 1, 2, "[State: %s]", ct::AudioPlayerStateToString(UISnapshot.AudioPlayerState).c_str());
+    mvwprintw(StatusWindow, 2, 2, "[Mode: %s]", ct::PlaybackModeToString(UISnapshot.PlaybackMode).c_str());
+    mvwprintw(StatusWindow, 3, 2, "[Volume: %s/%s]", 
+        std::to_string(static_cast<int>(UISnapshot.Volume)).c_str(),
+        std::to_string(static_cast<int>(gp::MAX_VOLUME)).c_str());
+    
+    mvwprintw(StatusWindow, 4, 2, "[%s %s]", 
+        FormatTime(TrackInfo.DurationSec).c_str(),
+        UISnapshot.CurrentTrackName.c_str());
+    
+    mvwprintw(StatusWindow, 5, 2, "[%s %s %s]", 
+        FormatTime(TrackInfo.PositionSec).c_str(), 
+        ProgressBar.c_str(), 
+        FormatTime(TrackInfo.RemainingSec).c_str());
 
     wrefresh(StatusWindow);
 }
@@ -502,7 +509,7 @@ void MConsoleIO::PrintCommandHelp()
     }
     
     std::vector<std::string> Lines;
-    Lines.emplace_back(std::string(stp::msg::APP_HELP_MSG) + " Available commands:");
+    Lines.emplace_back(std::string(stp::msg::APP_HELP_MSG) + "Available commands:");
     
     for (const FHelpEntry& HelpEntry : HelpEntries)
     {
@@ -802,7 +809,7 @@ void MConsoleIO::PrintStatus(const FUISnapshotData &UISnapshot, const FTrackInfo
     Lines.emplace_back("  [Duration: " + FormatTime(DurationSec) + "]");
     Lines.emplace_back("  [Position: " + FormatTime(CurrentOffsetSec) + "]");
     Lines.emplace_back("  [Remaining: " + FormatTime(RemainingSec) + "]");
-    Lines.emplace_back("  [Volume: " + std::to_string(static_cast<int>(gp::MIN_VOLUME)) + "/" + VolumeStr + "]");
+    Lines.emplace_back("  [Volume: " + VolumeStr + "/" + std::to_string(static_cast<int>(gp::MAX_VOLUME)) + "]");
     PrintOutputLines(Lines);
 }
 
@@ -910,6 +917,23 @@ void MConsoleIO::RenderOutputWindow()
 bool MConsoleIO::IsTerminalTooSmall(int Width, int Height)
 {
     return Width < MinimumTerminalWidth || Height < MinimumTerminalHeight;
+}
+
+std::string MConsoleIO::BuildProgressBar(float PositionSec, float DuractionSec, int BarWidth)
+{
+    float Progress = 0.f;
+    
+    if (DuractionSec > 0.f)
+    {
+        Progress = PositionSec / DuractionSec;
+    }
+    
+    Progress = std::clamp(Progress, 0.f, 1.f);
+    
+    int FilledBarWidth = static_cast<int>(Progress * BarWidth);
+    int EmptyBarWidth = BarWidth - FilledBarWidth;
+    
+    return "[" + std::string(FilledBarWidth, '#') + std::string(EmptyBarWidth, '-') + "]";
 }
 
 std::string MConsoleIO::FormatTime(float sec)

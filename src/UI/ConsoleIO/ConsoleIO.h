@@ -12,8 +12,8 @@
 
 constexpr int MinimumTerminalWidth = 72;
 constexpr int MinimumTerminalHeight = 18;
-constexpr int MinimumStatusWindowHeight = 10;
-constexpr int MinimumOutputWindowHeight = 4;
+constexpr int MinimumStatusWindowHeight = 7;
+constexpr int MinimumOutputWindowHeight = 8;
 constexpr int MinimumInputWindowHeight = 3;
 
 struct FUISnapshotData;
@@ -99,6 +99,7 @@ private:
     void PrintOutputLines(const std::vector<std::string> &Lines);
     void RenderOutputWindow();
     bool IsTerminalTooSmall(int Width, int Height);
+    std::string BuildProgressBar(float PositionSec, float DuractionSec, int BarWidth);
     //------------------------------------------------------------------------------------------------------------------
     
     
