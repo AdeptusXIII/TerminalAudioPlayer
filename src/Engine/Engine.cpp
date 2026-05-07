@@ -10,6 +10,7 @@
 #include <filesystem>
 #include <chrono>
 #include <cmath>
+#include <algorithm>
 
 MEngine::MEngine()
     

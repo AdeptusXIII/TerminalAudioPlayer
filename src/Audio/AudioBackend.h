@@ -2,6 +2,8 @@
 #pragma once
 
 #include <filesystem>
+#include <optional>
+
 #include "SFML/Audio.hpp"
 
 class MAudioBackend 
@@ -33,5 +35,5 @@ private:
     bool LoadBufferFromFile(const std::filesystem::path &InPath);
     
     sf::SoundBuffer Buffer;
-    sf::Sound Sound;
+    std::optional<sf::Sound> Sound;
 };

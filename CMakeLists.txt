@@ -5,7 +5,7 @@ project(TerminalAudioPlayer VERSION 0.14 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
-find_package(SFML 2.6 COMPONENTS audio REQUIRED)
+find_package(SFML 3 COMPONENTS Audio REQUIRED)
 find_package(Curses REQUIRED)
 
 add_executable(terminal_player
@@ -32,5 +32,5 @@ add_executable(terminal_player
 
 target_include_directories(terminal_player PRIVATE src)
 target_include_directories(terminal_player PRIVATE ${CURSES_INCLUDE_DIRS})
-target_link_libraries(terminal_player PRIVATE sfml-audio)
+target_link_libraries(terminal_player PRIVATE SFML::Audio)
 target_link_libraries(terminal_player PRIVATE ${CURSES_LIBRARIES})
