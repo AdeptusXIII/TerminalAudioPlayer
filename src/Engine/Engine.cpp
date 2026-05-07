@@ -25,7 +25,7 @@ MEngine::MEngine()
 
 void MEngine::Init()
 {
-    std::string VersionNumber = "0.14";
+    std::string VersionNumber = "0.15";
     std::cout << stp::msg::ENGINE_INIT_MSG << VersionNumber << std::endl;
     
     FileManager.Init();   
