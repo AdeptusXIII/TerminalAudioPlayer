@@ -13,6 +13,9 @@
 #include <iomanip>
 #include <iostream>
 #include <sstream>
+#include <locale>
+#include <cstdlib>
+#include <cwchar>
 
 MConsoleIO::MConsoleIO() 
 {
@@ -31,6 +34,13 @@ MConsoleIO::MConsoleIO()
 
 void MConsoleIO::InitTUI()
 {
+    if (!IsUTF8Locale())
+    {
+        std::cout << "TerminalAudioPlayer requires a UTF-8 locale." << std::endl;
+        std::cout << "Example: LANG=en_US.UTF-8 ./terminal_player" << std::endl;
+        return;
+    }
+    
     initscr();
     cbreak(); // читать сразу
     noecho(); // символы не печатаются автоматически
@@ -75,6 +85,8 @@ void MConsoleIO::InitTUI()
 
     keypad(InputWindow, TRUE);
     nodelay(InputWindow, TRUE);
+    
+    PrintOutputMessage("Type <" + ct::CommandTypeToString(ECommandType::Help) + "> to show available commands.");
 }
 
 void MConsoleIO::ResizeTUI()
@@ -161,6 +173,7 @@ void MConsoleIO::RenderStatusWindow(const FUISnapshotData &UISnapshot, const FTr
     box(StatusWindow, 0, 0);
     
     std::string ProgressBar = BuildProgressBar(TrackInfo.PositionSec, TrackInfo.DurationSec, 20);
+    std::wstring Test = ConvertUtf8ToWide("│ ├── └──");
     
     mvwprintw(StatusWindow, 1, 2, "[State: %s]", ct::AudioPlayerStateToString(UISnapshot.AudioPlayerState).c_str());
     mvwprintw(StatusWindow, 2, 2, "[Mode: %s]", ct::PlaybackModeToString(UISnapshot.PlaybackMode).c_str());
@@ -289,7 +302,7 @@ void MConsoleIO::ScrollOutputWindowVertical(int DeltaLines)
         OutputVerticalScrollOffset = 0;
     
     const int MaxPrintableLines = OutputWindowHeight - 2;
-    int MaxScrollOffset = static_cast<int>(LastOutputLines.size()) - MaxPrintableLines;
+    int MaxScrollOffset = static_cast<int>(LastOutputLinesWide.size()) - MaxPrintableLines;
     
     if (MaxScrollOffset < 0) 
         MaxScrollOffset = 0;
@@ -318,7 +331,7 @@ void MConsoleIO::ScrollOutputWindowHorizontal(int DeltaColumns)
     
     int MaxLineLength = 0;
 
-    for (const std::string& Line : LastOutputLines)
+    for (const std::wstring& Line : LastOutputLinesWide)
     {
         if (static_cast<int>(Line.size()) > MaxLineLength)
         {
@@ -452,7 +465,7 @@ FCommand MConsoleIO::ReadCommand()
 void MConsoleIO::PrintTrackList(const FUISnapshotData &UISnapshot)
 {
     std::vector<std::string> Lines;
-    Lines.emplace_back(stp::msg::fnc::APP_FNC_TOTAL_TRACKS_MSG + std::to_string(UISnapshot.TrackCount));
+    Lines.emplace_back(std::string(stp::msg::APP_LIST_MSG) + stp::msg::fnc::APP_FNC_TOTAL_TRACKS_MSG + std::to_string(UISnapshot.TrackCount));
 
     for (int i = 0; i < UISnapshot.TrackCount; i++)
     {
@@ -516,7 +529,7 @@ void MConsoleIO::PrintCommandHelp()
         size_t Padding = MaxUsageLen - HelpEntry.Usage.size() + CommandHelpIdentation;
         Lines.emplace_back(HelpEntry.Usage + std::string(Padding, ' ') + HelpEntry.Description);
     }
-
+    
     PrintOutputLines(Lines);
 }
 
@@ -623,18 +636,42 @@ void MConsoleIO::PrintCommandHelpArg(ECommandType CommandType)
             HelpEntryEXT.Usage.emplace_back(ct::CommandTypeToString(ECommandType::Mode) + " " + 
                 ct::RequiredArgDataTypeToString(ECommandType::Mode));
             
-            HelpEntryEXT.Description.emplace_back("Set playback mode for the player.");
-            HelpEntryEXT.Description.emplace_back("The <" + ct::PlaybackModeToString(EPlaybackMode::Once) + "> argument "
-                "switches the player to single-play mode. This means the currently active track will play exactly once.");
-            HelpEntryEXT.Description.emplace_back("The <" + ct::PlaybackModeToString(EPlaybackMode::LoopOne) + "> "
-                "argument puts the player into loop mode for the currently active track. This is almost the same as <" + 
-            ct::PlaybackModeToString(EPlaybackMode::Once) + ">, except it plays one specific track repeatedly.");
-            HelpEntryEXT.Description.emplace_back("The <" + ct::PlaybackModeToString(EPlaybackMode::LoopAll) + "> "
-                "argument puts the player into a looped playback mode, playing the track list from start to finish, then "
-                "restarting from the beginning after the last track in the list has played. This creates an endless loop.");
-            HelpEntryEXT.Description.emplace_back("The <" + ct::PlaybackModeToString(EPlaybackMode::LoopShuffle) + "> "
-                "argument puts the player into a looped playback mode of the list of all tracks, but each subsequent "
-                "track is selected randomly.");
+            {
+                HelpEntryEXT.Description.emplace_back("Set playback mode for the player.");
+                HelpEntryEXT.Description.emplace_back("The <" + ct::PlaybackModeToString(EPlaybackMode::Once) + "> argument "
+                    "switches the player to single-play mode.");
+                HelpEntryEXT.Description.emplace_back(std::string(stp::sep::SUBCAT_SEP_TAB) + 
+                    "This means the currently active track will play exactly once.");
+                HelpEntryEXT.Description.emplace_back("\n");
+            }
+            
+            {
+                HelpEntryEXT.Description.emplace_back("The <" + ct::PlaybackModeToString(EPlaybackMode::LoopOne) + "> "
+                    "argument puts the player into loop mode for the currently active track.");
+                HelpEntryEXT.Description.emplace_back(std::string(stp::sep::SUBCAT_SEP_TAB) + 
+                    "This is almost the same as <" + ct::PlaybackModeToString(EPlaybackMode::Once) + ">, except it plays one"
+                    " specific track repeatedly.");
+                HelpEntryEXT.Description.emplace_back("\n");
+            }
+                
+            {
+                HelpEntryEXT.Description.emplace_back("The <" + ct::PlaybackModeToString(EPlaybackMode::LoopAll) + "> "
+                    "argument puts the player into a looped playback mode,"); 
+                HelpEntryEXT.Description.emplace_back(std::string(stp::sep::SUBCAT_SEP_TAB) + 
+                    "playing the track list from start to finish, then restarting from ");
+                HelpEntryEXT.Description.emplace_back(std::string(stp::sep::SUBCAT_SEP_TAB) + 
+                    "the beginning after the last track in the list has played."); 
+                HelpEntryEXT.Description.emplace_back(std::string(stp::sep::SUBCAT_SEP_TAB) + 
+                    "This creates an endless loop.");
+                HelpEntryEXT.Description.emplace_back("\n");
+            }
+            
+            {
+                HelpEntryEXT.Description.emplace_back("The <" + ct::PlaybackModeToString(EPlaybackMode::LoopShuffle) + "> "
+                    "argument puts the player into a looped playback mode");
+                HelpEntryEXT.Description.emplace_back(std::string(stp::sep::SUBCAT_SEP_TAB) + 
+                    "of the list of all tracks, but each subsequent track is selected randomly.");
+            }
             
             HelpEntryEXT.Examples.emplace_back(ct::CommandTypeToString(ECommandType::Mode) + " " + 
                 ct::PlaybackModeToString(EPlaybackMode::Once));
@@ -856,6 +893,11 @@ void MConsoleIO::DeleteTUIWindows()
 void MConsoleIO::PrintOutputLines(const std::vector<std::string> &Lines)
 {
     LastOutputLines = Lines;
+    LastOutputLinesWide.clear();
+    for (const std::string& Line : Lines)
+    {
+        LastOutputLinesWide.push_back(ConvertUtf8ToWide(Line));
+    }
     OutputVerticalScrollOffset = 0;
     OutputHorizontalScrollOffset = 0;
     
@@ -898,18 +940,30 @@ void MConsoleIO::RenderOutputWindow()
     for (int i = 0; i < MaxPrintableLines; i++)
     {
         const int SourceIndex = OutputVerticalScrollOffset + i;
-        if (SourceIndex >=static_cast<int>(LastOutputLines.size())) break;
         
-        const std::string& Line = LastOutputLines[SourceIndex];
-        if (OutputHorizontalScrollOffset >= static_cast<int>(Line.size()))  continue;
         
-        mvwaddnstr(
+        if (SourceIndex >= static_cast<int>(LastOutputLinesWide.size()))
+        {
+            break;
+        }
+
+        const std::wstring& Line = LastOutputLinesWide[SourceIndex];
+        
+        if (OutputHorizontalScrollOffset >= static_cast<int>(Line.size()))
+        {
+            continue;
+        }
+        
+        mvwaddnwstr(
             OutputWindow,
-            i + 1, 
-            TextStartX, 
+            i + 1,
+            TextStartX,
             Line.c_str() + OutputHorizontalScrollOffset,
             MaxPrintableColumns);
     }
+        
+
+
     
     wrefresh(OutputWindow);
 }
@@ -934,6 +988,45 @@ std::string MConsoleIO::BuildProgressBar(float PositionSec, float DuractionSec, 
     int EmptyBarWidth = BarWidth - FilledBarWidth;
     
     return "[" + std::string(FilledBarWidth, '#') + std::string(EmptyBarWidth, '-') + "]";
+}
+
+bool MConsoleIO::IsUTF8Locale()
+{
+    setlocale(LC_ALL, "");
+
+    const char* Locale = setlocale(LC_CTYPE, nullptr);
+
+    if (Locale == nullptr) return false;
+
+    std::string LocaleName = Locale;
+
+    return LocaleName.find("UTF-8") != std::string::npos
+        || LocaleName.find("utf8") != std::string::npos
+        || LocaleName.find("UTF8") != std::string::npos;
+}
+
+std::wstring MConsoleIO::ConvertUtf8ToWide(const std::string &Text) const
+{
+    if (Text.empty()) return L"";
+    
+    std::mbstate_t State{};
+    const char* Source = Text.c_str();
+    
+    const std::size_t RequiredSize = std::mbsrtowcs(nullptr, &Source, 0, &State);
+    
+    if (RequiredSize == static_cast<std::size_t>(-1))
+    {
+        return L"";
+    }
+    
+    std::wstring Result(RequiredSize, L'\0');
+
+    State = std::mbstate_t{};
+    Source = Text.c_str();
+
+    std::mbsrtowcs(Result.data(), &Source, Result.size(), &State);
+
+    return Result;
 }
 
 std::string MConsoleIO::FormatTime(float sec)

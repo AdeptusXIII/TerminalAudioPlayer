@@ -32,6 +32,13 @@ input handling, UI, command processing, state management, track library scanning
 - SFML Audio
 - ncurses
 
+## Requirements
+
+- Linux
+- UTF-8 terminal
+- ncursesw
+- SFML 3 Audio
+
 ## Status
 
 MVP

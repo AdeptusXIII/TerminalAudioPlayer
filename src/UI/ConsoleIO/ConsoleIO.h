@@ -74,6 +74,7 @@ private:
     WINDOW* InputWindow;
     
     std::vector<std::string> LastOutputLines;
+    std::vector<std::wstring> LastOutputLinesWide;
     
     int StatusWindowHeight;
     int OutputWindowHeight;
@@ -100,6 +101,8 @@ private:
     void RenderOutputWindow();
     bool IsTerminalTooSmall(int Width, int Height);
     std::string BuildProgressBar(float PositionSec, float DuractionSec, int BarWidth);
+    bool IsUTF8Locale();
+    std::wstring ConvertUtf8ToWide(const std::string& Text) const;
     //------------------------------------------------------------------------------------------------------------------
     
     

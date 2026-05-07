@@ -11,13 +11,13 @@ namespace stp
     namespace sep
     {
         /** SubCategory Separator Type T: "├──" */
-        constexpr const char* SUBCAT_SEP_T = "|-";
+        constexpr const char* SUBCAT_SEP_T = "├──";
         
         /** SubCategory Separator Type L: "└──" */
-        constexpr const char* SUBCAT_SEP_L = "`-";
+        constexpr const char* SUBCAT_SEP_L = "└──";
         
         /** SubCategory Separator Type I: "│" */
-        constexpr const char* SUBCAT_SEP_I = "|";
+        constexpr const char* SUBCAT_SEP_I = "│";
         
         /** SubCategory Separator Type TAB: "  " */
         constexpr const char* SUBCAT_SEP_TAB = "  ";
@@ -32,6 +32,7 @@ namespace stp
         constexpr const char* APP_LIBRARY_MSG = "[TAP::LIBRARY] ";
         constexpr const char* APP_HELP_MSG = "[TAP::HELP] ";
         constexpr const char* APP_STATUS_MSG = "[TAP::STATUS] ";
+        constexpr const char* APP_LIST_MSG = "[TAP::LIST] ";
         constexpr const char* APP_FIND_MSG = "[TAP::FIND] ";
         constexpr const char* APP_SHUTDOWN_MSG = "[TAP::SHUTDOWN] Shutting down...";
     
