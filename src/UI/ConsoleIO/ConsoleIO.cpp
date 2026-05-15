@@ -52,39 +52,10 @@ void MConsoleIO::InitTUI()
     int MaxX = 0;
     getmaxyx(stdscr, MaxY, MaxX);
     
-    bTerminalTooSmall = IsTerminalTooSmall(MaxX, MaxY);
-    if (bTerminalTooSmall)
-    {
-        clear();
-        mvprintw(1, 2, "TERMINAL TOO SMALL");
-        mvprintw(2, 2, "MINIMUM SIZE: %dx%d", MinimumTerminalWidth, MinimumTerminalHeight);
-        mvprintw(3, 2, "CURRENT SIZE: %dx%d", MaxX, MaxY);
-        refresh();
-        return;
-    }
-
-    if (StatusWindowHeight + InputWindowHeight >= MaxY)
-    {
-        StatusWindowHeight = MaxY > 6 ? MaxY - 4 : 3;
-    }
-
-    OutputWindowHeight = MaxY - StatusWindowHeight - InputWindowHeight;
-    if (OutputWindowHeight < MinimumOutputWindowHeight)
-    {
-        OutputWindowHeight = MinimumOutputWindowHeight;
-        StatusWindowHeight = MaxY - InputWindowHeight - OutputWindowHeight;
-    }
-
-    StatusWindow = newwin(StatusWindowHeight, MaxX, 0, 0);
-    OutputWindow = newwin(OutputWindowHeight, MaxX, StatusWindowHeight, 0);
-    InputWindow = newwin(InputWindowHeight, MaxX, StatusWindowHeight + OutputWindowHeight, 0);
-
-    scrollok(StatusWindow, FALSE);
-    scrollok(OutputWindow, FALSE);
-    scrollok(InputWindow, FALSE);
-
-    keypad(InputWindow, TRUE);
-    nodelay(InputWindow, TRUE);
+    if (HandleTerminalTooSmall(MaxX, MaxY)) return;
+    
+    FTUILayout Layout = BuildTUILayout(MaxX, MaxY);
+    CreateTUIWindows(Layout);
     
     PrintOutputMessage("Type <" + ct::CommandTypeToString(ECommandType::Help) + "> to show available commands.");
 }
@@ -102,45 +73,10 @@ void MConsoleIO::ResizeTUI()
     int MaxY = 0;
     getmaxyx(stdscr, MaxY, MaxX);
     
-    bTerminalTooSmall = IsTerminalTooSmall(MaxX, MaxY);
-    if (bTerminalTooSmall)
-    {
-        clear();
-        mvprintw(1, 2, "TERMINAL TOO SMALL");
-        mvprintw(2, 2, "MINIMUM SIZE: %dx%d", MinimumTerminalWidth, MinimumTerminalHeight);
-        mvprintw(3, 2, "CURRENT SIZE: %dx%d", MaxX, MaxY);
-        refresh();
-        return;
-    }
+    if (HandleTerminalTooSmall(MaxX, MaxY)) return;
     
-    StatusWindowHeight = MinimumStatusWindowHeight;
-    InputWindowHeight = MinimumInputWindowHeight;
-    
-    if (StatusWindowHeight + InputWindowHeight >= MaxY)
-    {
-        StatusWindowHeight = MaxY > 6 ? MaxY - 4 : 3;
-    }
-    
-    OutputWindowHeight = MaxY - StatusWindowHeight - InputWindowHeight;
-    if (OutputWindowHeight < MinimumOutputWindowHeight)
-    {
-        OutputWindowHeight = MinimumOutputWindowHeight;
-        StatusWindowHeight = MaxY - InputWindowHeight - OutputWindowHeight;
-    }
-    
-    StatusWindow = newwin(StatusWindowHeight, MaxX, 0, 0);
-    OutputWindow = newwin(OutputWindowHeight, MaxX, StatusWindowHeight, 0);
-    InputWindow = newwin(InputWindowHeight, MaxX, StatusWindowHeight + OutputWindowHeight, 0);
-
-    
-    scrollok(StatusWindow, FALSE);
-    scrollok(OutputWindow, FALSE);
-    scrollok(InputWindow, FALSE);
-    
-    keypad(InputWindow, TRUE);
-    nodelay(InputWindow, TRUE);
-    
-    RenderOutputWindow();
+    FTUILayout Layout = BuildTUILayout(MaxX, MaxY);
+    CreateTUIWindows(Layout);
 }
 
 void MConsoleIO::ShutDownTUI()
@@ -890,6 +826,27 @@ void MConsoleIO::DeleteTUIWindows()
     InputWindow = nullptr;
 }
 
+void MConsoleIO::CreateTUIWindows(const FTUILayout &Layout)
+{
+    StatusWindowHeight = Layout.StatusHeight;
+    OutputWindowHeight = Layout.OutputHeight;
+    InputWindowHeight = Layout.InputHeight;
+    
+    StatusWindow = newwin(StatusWindowHeight, Layout.Width, 0, 0);
+    OutputWindow = newwin(OutputWindowHeight, Layout.Width, StatusWindowHeight, 0);
+    InputWindow = newwin(InputWindowHeight, Layout.Width, StatusWindowHeight + OutputWindowHeight, 0);
+
+    
+    scrollok(StatusWindow, FALSE);
+    scrollok(OutputWindow, FALSE);
+    scrollok(InputWindow, FALSE);
+    
+    keypad(InputWindow, TRUE);
+    nodelay(InputWindow, TRUE);
+    
+    RenderOutputWindow();
+}
+
 void MConsoleIO::PrintOutputLines(const std::vector<std::string> &Lines)
 {
     LastOutputLines = Lines;
@@ -961,16 +918,32 @@ void MConsoleIO::RenderOutputWindow()
             Line.c_str() + OutputHorizontalScrollOffset,
             MaxPrintableColumns);
     }
-        
-
-
     
     wrefresh(OutputWindow);
 }
 
-bool MConsoleIO::IsTerminalTooSmall(int Width, int Height)
+bool MConsoleIO::HandleTerminalTooSmall(int TerminalWidth, int TerminalHeight)
 {
-    return Width < MinimumTerminalWidth || Height < MinimumTerminalHeight;
+    bTerminalTooSmall = 
+        TerminalWidth < MinimumTerminalWidth ||
+        TerminalHeight < MinimumTerminalHeight;
+    
+    if (bTerminalTooSmall)
+    {
+        RenderTerminalToSmall(TerminalWidth, TerminalHeight);
+        return true;
+    }
+    
+    return false;
+}
+
+void MConsoleIO::RenderTerminalToSmall(int TerminalWidth, int TerminalHeight)
+{
+    clear();
+    mvprintw(1, 2, "TERMINAL TOO SMALL");
+    mvprintw(2, 2, "MINIMUM SIZE: %dx%d", MinimumTerminalWidth, MinimumTerminalHeight);
+    mvprintw(3, 2, "CURRENT SIZE: %dx%d", TerminalWidth, TerminalHeight);
+    refresh();
 }
 
 std::string MConsoleIO::BuildProgressBar(float PositionSec, float DuractionSec, int BarWidth)
@@ -1027,6 +1000,24 @@ std::wstring MConsoleIO::ConvertUtf8ToWide(const std::string &Text) const
     std::mbsrtowcs(Result.data(), &Source, Result.size(), &State);
 
     return Result;
+}
+
+FTUILayout MConsoleIO::BuildTUILayout(int TerminalWidth, int TerminalHeight)
+{
+    FTUILayout Layout;
+    
+    Layout.Width = TerminalWidth;
+    Layout.StatusHeight = MinimumStatusWindowHeight;
+    Layout.InputHeight = MinimumInputWindowHeight;
+    Layout.OutputHeight = TerminalHeight - Layout.StatusHeight - Layout.InputHeight;
+    
+    if (Layout.OutputHeight < MinimumOutputWindowHeight);
+    {
+        Layout.OutputHeight = MinimumOutputWindowHeight;
+        Layout.StatusHeight = TerminalHeight - Layout.InputHeight - Layout.OutputHeight;
+    }
+    
+    return Layout;
 }
 
 std::string MConsoleIO::FormatTime(float sec)

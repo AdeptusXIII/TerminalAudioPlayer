@@ -32,6 +32,14 @@ struct FHelpEntryEXT
     std::vector<std::string> Examples;
 };
 
+struct FTUILayout
+{
+    int StatusHeight = 0;
+    int OutputHeight = 0;
+    int InputHeight = 0;
+    int Width = 0;
+};
+
 class MConsoleIO 
 {
 public:
@@ -97,12 +105,15 @@ private:
     /** NCURSES ConsoleApp-style helpers */
     //------------------------------------------------------------------------------------------------------------------
     void DeleteTUIWindows();
+    void CreateTUIWindows(const FTUILayout &Layout);
     void PrintOutputLines(const std::vector<std::string> &Lines);
     void RenderOutputWindow();
-    bool IsTerminalTooSmall(int Width, int Height);
+    bool HandleTerminalTooSmall(int TerminalWidth, int TerminalHeight);
+    void RenderTerminalToSmall(int TerminalWidth, int TerminalHeight);
     std::string BuildProgressBar(float PositionSec, float DuractionSec, int BarWidth);
     bool IsUTF8Locale();
     std::wstring ConvertUtf8ToWide(const std::string& Text) const;
+    FTUILayout BuildTUILayout(int TerminalWidth, int TerminalHeight);
     //------------------------------------------------------------------------------------------------------------------
     
     
