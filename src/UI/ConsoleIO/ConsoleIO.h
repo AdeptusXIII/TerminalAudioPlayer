@@ -55,7 +55,6 @@ public:
     FCommand ParseCommandLine(const std::string &Input);
     int ReadInputKey();
     void ScrollOutputWindowVertical(int DeltaLines);
-    void ScrollOutputWindowHorizontal(int DeltaColumns);
     bool GetTerminalTooSmall() const { return bTerminalTooSmall; }
 
     //------------------------------------------------------------------------------------------------------------------
@@ -69,7 +68,7 @@ public:
     void PrintCommandHelp();
     void PrintCommandHelpArg(ECommandType CommandType);
     void PrintStatus(const FUISnapshotData &UISnapshot, const FTrackInfo &TrackInfo);
-    void PrintFindResults(const std::vector<std::pair<int, std::string>> &FindedTracks);
+    void PrintFindResults(const std::vector<std::pair<int, std::string>> &FoundTracks);
     void PrintOutputMessage(const std::string &Message);
     //------------------------------------------------------------------------------------------------------------------
     
@@ -82,14 +81,13 @@ private:
     WINDOW* InputWindow;
     
     std::vector<std::string> LastOutputLines;
-    std::vector<std::wstring> LastOutputLinesWide;
+    std::vector<std::wstring> LastOutputRenderLines;
     
     int StatusWindowHeight;
     int OutputWindowHeight;
     int InputWindowHeight;
     
     int OutputVerticalScrollOffset;
-    int OutputHorizontalScrollOffset;
 
     bool bTUIActive;
     bool bTerminalTooSmall;
@@ -98,7 +96,7 @@ private:
     
     /** Standard COUT-CommandLine-style */
     //------------------------------------------------------------------------------------------------------------------
-    int CommandHelpIdentation;
+    int CommandHelpIndentation;
     //------------------------------------------------------------------------------------------------------------------
     
     
@@ -107,10 +105,13 @@ private:
     void DeleteTUIWindows();
     void CreateTUIWindows(const FTUILayout &Layout);
     void PrintOutputLines(const std::vector<std::string> &Lines);
+    void SetOutputLines(const std::vector<std::string> &Lines);
+    void RebuildOutputRenderLines();
+    void AppendWrappedOutputRenderLines(const std::wstring& Line, int MaxPrintableColumns);
     void RenderOutputWindow();
     bool HandleTerminalTooSmall(int TerminalWidth, int TerminalHeight);
-    void RenderTerminalToSmall(int TerminalWidth, int TerminalHeight);
-    std::string BuildProgressBar(float PositionSec, float DuractionSec, int BarWidth);
+    void RenderTerminalTooSmall(int TerminalWidth, int TerminalHeight);
+    std::string BuildProgressBar(float PositionSec, float DurationSec, int BarWidth);
     bool IsUTF8Locale();
     std::wstring ConvertUtf8ToWide(const std::string& Text) const;
     FTUILayout BuildTUILayout(int TerminalWidth, int TerminalHeight);

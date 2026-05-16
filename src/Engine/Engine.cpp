@@ -25,7 +25,7 @@ MEngine::MEngine()
 
 void MEngine::Init()
 {
-    std::string VersionNumber = "0.15";
+    std::string VersionNumber = "0.16";
     std::cout << stp::msg::ENGINE_INIT_MSG << VersionNumber << std::endl;
     
     FileManager.Init();   
@@ -150,15 +150,6 @@ void MEngine::RunTUILoop()
         {
             ConsoleIO.ResizeTUI();
         }
-        else if (Ch == KEY_LEFT)
-        {
-            ConsoleIO.ScrollOutputWindowHorizontal(-1);
-        }
-        else if (Ch == KEY_RIGHT)
-        {
-            ConsoleIO.ScrollOutputWindowHorizontal(1);
-        }
-
         else if (Ch >= 32 && Ch <= 126)
         {
             InputBuffer.push_back(static_cast<char>(Ch));
@@ -582,7 +573,7 @@ std::vector<std::pair<int, std::string>> MEngine::FindTracksByName(const std::st
 {
     if (Arg.empty()) return {};
 
-    std::vector<std::pair<int, std::string>> FindedTracks = {};
+    std::vector<std::pair<int, std::string>> FoundTracks = {};
     std::string Query = Arg;
     std::transform(Query.begin(), Query.end(), Query.begin(), 
         [](unsigned char c) { return std::tolower(c); });
@@ -596,11 +587,11 @@ std::vector<std::pair<int, std::string>> MEngine::FindTracksByName(const std::st
 
         if (FormattedTrackName.find(Query) != std::string::npos)
         {
-            FindedTracks.emplace_back(i, TrackName);
+            FoundTracks.emplace_back(i, TrackName);
         }
     }
     
-    return FindedTracks;
+    return FoundTracks;
 }
 
 bool MEngine::TryExit() 

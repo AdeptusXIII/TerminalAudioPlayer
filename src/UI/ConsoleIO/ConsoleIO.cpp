@@ -26,10 +26,9 @@ MConsoleIO::MConsoleIO()
     OutputWindowHeight = 0;
     InputWindowHeight = MinimumInputWindowHeight;
     OutputVerticalScrollOffset = 0;
-    OutputHorizontalScrollOffset = 0;
     bTUIActive = false;
     bTerminalTooSmall = false;
-    CommandHelpIdentation = static_cast<int>(std::strlen(stp::sep::SUBCAT_SEP_TAB));
+    CommandHelpIndentation = static_cast<int>(std::strlen(stp::sep::SUBCAT_SEP_TAB));
 }
 
 void MConsoleIO::InitTUI()
@@ -77,28 +76,14 @@ void MConsoleIO::ResizeTUI()
     
     FTUILayout Layout = BuildTUILayout(MaxX, MaxY);
     CreateTUIWindows(Layout);
+    
+    RebuildOutputRenderLines();
+    RenderOutputWindow();
 }
 
 void MConsoleIO::ShutDownTUI()
 {
-    if (StatusWindow != nullptr)
-    {
-        delwin(StatusWindow);
-        StatusWindow = nullptr;
-    }
-
-    if (OutputWindow != nullptr)
-    {
-        delwin(OutputWindow);
-        OutputWindow = nullptr;
-    }
-
-    if (InputWindow != nullptr)
-    {
-        delwin(InputWindow);
-        InputWindow = nullptr;
-    }
-
+    DeleteTUIWindows();
     bTUIActive = false;
     endwin();
 }
@@ -238,7 +223,7 @@ void MConsoleIO::ScrollOutputWindowVertical(int DeltaLines)
         OutputVerticalScrollOffset = 0;
     
     const int MaxPrintableLines = OutputWindowHeight - 2;
-    int MaxScrollOffset = static_cast<int>(LastOutputLinesWide.size()) - MaxPrintableLines;
+    int MaxScrollOffset = static_cast<int>(LastOutputRenderLines.size()) - MaxPrintableLines;
     
     if (MaxScrollOffset < 0) 
         MaxScrollOffset = 0;
@@ -246,43 +231,6 @@ void MConsoleIO::ScrollOutputWindowVertical(int DeltaLines)
     if (OutputVerticalScrollOffset > MaxScrollOffset)
         OutputVerticalScrollOffset = MaxScrollOffset;
     
-    RenderOutputWindow();
-}
-
-void MConsoleIO::ScrollOutputWindowHorizontal(int DeltaColumns)
-{
-    if (OutputWindow == nullptr) return;
-    OutputHorizontalScrollOffset += DeltaColumns;
-    
-    if (OutputHorizontalScrollOffset < 0)
-        OutputHorizontalScrollOffset = 0;
-    
-    int WindowHeight = 0;
-    int WindowWidth = 0;
-    getmaxyx(OutputWindow, WindowHeight, WindowWidth);
-    
-    const int TextStartX = 2;
-    const int RightPadding = 1;
-    const int MaxPrintableColumns = WindowWidth - TextStartX - RightPadding - 1;
-    
-    int MaxLineLength = 0;
-
-    for (const std::wstring& Line : LastOutputLinesWide)
-    {
-        if (static_cast<int>(Line.size()) > MaxLineLength)
-        {
-            MaxLineLength = static_cast<int>(Line.size());
-        }
-    }
-
-    int MaxScrollOffset = MaxLineLength - MaxPrintableColumns;
-
-    if (MaxScrollOffset < 0)
-        MaxScrollOffset = 0;
-
-    if (OutputHorizontalScrollOffset > MaxScrollOffset)
-        OutputHorizontalScrollOffset = MaxScrollOffset;
-
     RenderOutputWindow();
 }
 
@@ -462,7 +410,7 @@ void MConsoleIO::PrintCommandHelp()
     
     for (const FHelpEntry& HelpEntry : HelpEntries)
     {
-        size_t Padding = MaxUsageLen - HelpEntry.Usage.size() + CommandHelpIdentation;
+        size_t Padding = MaxUsageLen - HelpEntry.Usage.size() + CommandHelpIndentation;
         Lines.emplace_back(HelpEntry.Usage + std::string(Padding, ' ') + HelpEntry.Description);
     }
     
@@ -506,9 +454,8 @@ void MConsoleIO::PrintCommandHelpArg(ECommandType CommandType)
         {
             HelpEntryEXT.Usage.emplace_back(ct::CommandTypeToString(ECommandType::Next));
             
-            HelpEntryEXT.Description .emplace_back("Initiates playback of the next track in the list.");
-            HelpEntryEXT.Description .emplace_back("If there is no next track, it initiates playback of the very "
-                "first track in the list.");
+            HelpEntryEXT.Description .emplace_back("Initiates playback of the next track in the list. If there is no "
+                "next track, it initiates playback of the very first track in the list.");
             
             HelpEntryEXT.Examples.emplace_back(ct::CommandTypeToString(ECommandType::Next));
             break;
@@ -537,8 +484,8 @@ void MConsoleIO::PrintCommandHelpArg(ECommandType CommandType)
         {
             HelpEntryEXT.Usage.emplace_back(ct::CommandTypeToString(ECommandType::Refresh));
             
-            HelpEntryEXT.Description.emplace_back("Refreshes the track list.");
-            HelpEntryEXT.Description.emplace_back("Use this if you've added a new track to the default directory.");
+            HelpEntryEXT.Description.emplace_back("Refreshes the track list. Use this if you've added a new track to "
+                "the default directory.");
             
             HelpEntryEXT.Examples.emplace_back(ct::CommandTypeToString(ECommandType::Refresh));
             break;
@@ -573,40 +520,31 @@ void MConsoleIO::PrintCommandHelpArg(ECommandType CommandType)
                 ct::RequiredArgDataTypeToString(ECommandType::Mode));
             
             {
-                HelpEntryEXT.Description.emplace_back("Set playback mode for the player.");
-                HelpEntryEXT.Description.emplace_back("The <" + ct::PlaybackModeToString(EPlaybackMode::Once) + "> argument "
-                    "switches the player to single-play mode.");
-                HelpEntryEXT.Description.emplace_back(std::string(stp::sep::SUBCAT_SEP_TAB) + 
-                    "This means the currently active track will play exactly once.");
-                HelpEntryEXT.Description.emplace_back("\n");
+                HelpEntryEXT.Description.emplace_back("Set playback mode for the player. The <" + 
+                    ct::PlaybackModeToString(EPlaybackMode::Once) + "> argument switches the player to single-play mode."
+                    " This means the currently active track will play exactly once.");
+                HelpEntryEXT.Description.emplace_back("");
             }
             
             {
                 HelpEntryEXT.Description.emplace_back("The <" + ct::PlaybackModeToString(EPlaybackMode::LoopOne) + "> "
-                    "argument puts the player into loop mode for the currently active track.");
-                HelpEntryEXT.Description.emplace_back(std::string(stp::sep::SUBCAT_SEP_TAB) + 
-                    "This is almost the same as <" + ct::PlaybackModeToString(EPlaybackMode::Once) + ">, except it plays one"
-                    " specific track repeatedly.");
-                HelpEntryEXT.Description.emplace_back("\n");
+                    "argument puts the player into loop mode for the currently active track. This is almost the same as "
+                    "<" + ct::PlaybackModeToString(EPlaybackMode::Once) + ">, except it plays one specific track repeatedly.");
+                HelpEntryEXT.Description.emplace_back("");
             }
                 
             {
                 HelpEntryEXT.Description.emplace_back("The <" + ct::PlaybackModeToString(EPlaybackMode::LoopAll) + "> "
-                    "argument puts the player into a looped playback mode,"); 
-                HelpEntryEXT.Description.emplace_back(std::string(stp::sep::SUBCAT_SEP_TAB) + 
-                    "playing the track list from start to finish, then restarting from ");
-                HelpEntryEXT.Description.emplace_back(std::string(stp::sep::SUBCAT_SEP_TAB) + 
-                    "the beginning after the last track in the list has played."); 
-                HelpEntryEXT.Description.emplace_back(std::string(stp::sep::SUBCAT_SEP_TAB) + 
-                    "This creates an endless loop.");
-                HelpEntryEXT.Description.emplace_back("\n");
+                    "argument puts the player into a looped playback mode, playing the track list from start to finish,"
+                    " then restarting from the beginning after the last track in the list has played. This creates an "
+                    "endless loop.");
+                HelpEntryEXT.Description.emplace_back("");
             }
             
             {
                 HelpEntryEXT.Description.emplace_back("The <" + ct::PlaybackModeToString(EPlaybackMode::LoopShuffle) + "> "
-                    "argument puts the player into a looped playback mode");
-                HelpEntryEXT.Description.emplace_back(std::string(stp::sep::SUBCAT_SEP_TAB) + 
-                    "of the list of all tracks, but each subsequent track is selected randomly.");
+                    "argument puts the player into a looped playback mode of the list of all tracks, but each subsequent"
+                    " track is selected randomly.");
             }
             
             HelpEntryEXT.Examples.emplace_back(ct::CommandTypeToString(ECommandType::Mode) + " " + 
@@ -624,8 +562,8 @@ void MConsoleIO::PrintCommandHelpArg(ECommandType CommandType)
             HelpEntryEXT.Usage.emplace_back(ct::CommandTypeToString(ECommandType::Select) + " " + 
                 ct::RequiredArgDataTypeToString(ECommandType::Select));
             
-            HelpEntryEXT.Description.emplace_back("Initiates playback of a track by index.");
-            HelpEntryEXT.Description.emplace_back("Use the list command to get the track index.");
+            HelpEntryEXT.Description.emplace_back("Initiates playback of a track by index. Use the list command to get"
+            " the track index.");
             
             HelpEntryEXT.Examples.emplace_back(ct::CommandTypeToString(ECommandType::Select) + " 5");
             HelpEntryEXT.Examples.emplace_back(ct::CommandTypeToString(ECommandType::Select) + " 0");
@@ -786,24 +724,24 @@ void MConsoleIO::PrintStatus(const FUISnapshotData &UISnapshot, const FTrackInfo
     PrintOutputLines(Lines);
 }
 
-void MConsoleIO::PrintFindResults(const std::vector<std::pair<int, std::string>> &FindedTracks)
+void MConsoleIO::PrintFindResults(const std::vector<std::pair<int, std::string>> &FoundTracks)
 {
-    if (FindedTracks.empty())
+    if (FoundTracks.empty())
     {
         PrintOutputMessage(std::string(stp::msg::APP_FIND_MSG) + "No matches found.");
         return;
     }
 
     std::vector<std::string> Lines;
-    Lines.emplace_back(std::string(stp::msg::APP_FIND_MSG) + "Results: " + std::to_string(FindedTracks.size()));
+    Lines.emplace_back(std::string(stp::msg::APP_FIND_MSG) + "Results: " + std::to_string(FoundTracks.size()));
 
-    for (size_t i = 0; i < FindedTracks.size(); i++)
+    for (size_t i = 0; i < FoundTracks.size(); i++)
     {
-        const std::string SubCatTorL = (i == FindedTracks.size() - 1) ? stp::sep::SUBCAT_SEP_L : stp::sep::SUBCAT_SEP_T;
+        const std::string SubCatTorL = (i == FoundTracks.size() - 1) ? stp::sep::SUBCAT_SEP_L : stp::sep::SUBCAT_SEP_T;
 
         Lines.emplace_back(stp::sep::SUBCAT_SEP_TAB + SubCatTorL
-            + "Index(" + std::to_string(FindedTracks[i].first) + ")"
-            + "[" + FindedTracks[i].second + "]");
+            + "Index(" + std::to_string(FoundTracks[i].first) + ")"
+            + "[" + FoundTracks[i].second + "]");
     }
 
     PrintOutputLines(Lines);
@@ -816,14 +754,21 @@ void MConsoleIO::PrintOutputMessage(const std::string &Message)
 
 void MConsoleIO::DeleteTUIWindows()
 {
-    delwin(StatusWindow);
-    StatusWindow = nullptr;
-    
-    delwin(OutputWindow);
-    OutputWindow = nullptr;
-    
-    delwin(InputWindow);
-    InputWindow = nullptr;
+    if (StatusWindow != nullptr)
+    {
+        delwin(StatusWindow);
+        StatusWindow = nullptr;
+    }
+    if (OutputWindow != nullptr)
+    {
+        delwin(OutputWindow);
+        OutputWindow = nullptr;
+    }
+    if (InputWindow != nullptr)
+    {
+        delwin(InputWindow);
+        InputWindow = nullptr;
+    }
 }
 
 void MConsoleIO::CreateTUIWindows(const FTUILayout &Layout)
@@ -849,14 +794,7 @@ void MConsoleIO::CreateTUIWindows(const FTUILayout &Layout)
 
 void MConsoleIO::PrintOutputLines(const std::vector<std::string> &Lines)
 {
-    LastOutputLines = Lines;
-    LastOutputLinesWide.clear();
-    for (const std::string& Line : Lines)
-    {
-        LastOutputLinesWide.push_back(ConvertUtf8ToWide(Line));
-    }
-    OutputVerticalScrollOffset = 0;
-    OutputHorizontalScrollOffset = 0;
+    SetOutputLines(Lines);
     
     if (!bTUIActive || OutputWindow == nullptr)
     {
@@ -868,6 +806,112 @@ void MConsoleIO::PrintOutputLines(const std::vector<std::string> &Lines)
     }
 
     RenderOutputWindow();
+}
+
+void MConsoleIO::SetOutputLines(const std::vector<std::string> &Lines)
+{
+    LastOutputLines = Lines;
+    OutputVerticalScrollOffset = 0;
+    RebuildOutputRenderLines();
+}
+
+void MConsoleIO::RebuildOutputRenderLines()
+{
+    LastOutputRenderLines.clear();
+    
+    int MaxPrintableColumns = 0;
+    
+    if (OutputWindow != nullptr)
+    {
+        int WindowHeight = 0;
+        int WindowWidth = 0;
+        getmaxyx(OutputWindow, WindowHeight, WindowWidth);
+        
+        const int TextStartX = 2;
+        const int RightPadding = 1;
+        MaxPrintableColumns = WindowWidth - TextStartX - RightPadding - 1;
+    }
+    
+    for (const std::string &Line : LastOutputLines)
+    {
+        std::wstring WideLine = ConvertUtf8ToWide(Line);
+        AppendWrappedOutputRenderLines(WideLine, MaxPrintableColumns);
+    }
+}
+
+void MConsoleIO::AppendWrappedOutputRenderLines(const std::wstring &Line, int MaxPrintableColumns)
+{
+    if (Line.empty())
+    {
+        LastOutputRenderLines.emplace_back(L"");
+        return;
+    }
+    
+    if (MaxPrintableColumns <= 0)
+    {
+        LastOutputRenderLines.push_back(Line);
+        return;
+    }
+    
+    std::size_t IndentLength = 0; 
+    while (IndentLength < Line.size() && Line[IndentLength] == L' ')
+    {
+        IndentLength++;
+    }
+    std::wstring Indent = Line.substr(0, IndentLength);
+    bool bFirstVisualLine = true;
+    
+    auto AppendPiece = [&](const std::wstring &Piece)
+    {
+        if (bFirstVisualLine)
+        {
+            LastOutputRenderLines.push_back(Piece);
+            bFirstVisualLine = false;
+        }
+        else
+        {
+            LastOutputRenderLines.push_back(Indent + Piece);
+        }
+    };
+    
+    std::size_t Start = 0;
+    while (Start < Line.size())
+    {
+        int CurrentMaxColumns = MaxPrintableColumns;
+
+        if (!bFirstVisualLine)
+        {
+            CurrentMaxColumns -= static_cast<int>(Indent.size());
+        }
+
+        if (CurrentMaxColumns <= 0)
+        {
+            CurrentMaxColumns = MaxPrintableColumns;
+        }
+
+        const std::size_t Remaining = Line.size() - Start;
+
+        if (Remaining <= static_cast<std::size_t>(CurrentMaxColumns))
+        {
+            AppendPiece(Line.substr(Start));
+            break;
+        }
+
+        const std::size_t WrapEnd = Start + static_cast<std::size_t>(CurrentMaxColumns);
+
+        std::size_t SpacePos = Line.rfind(L' ', WrapEnd);
+
+        if (SpacePos != std::wstring::npos && SpacePos > Start)
+        {
+            AppendPiece(Line.substr(Start, SpacePos - Start));
+            Start = SpacePos + 1;
+        }
+        else
+        {
+            AppendPiece(Line.substr(Start, static_cast<std::size_t>(CurrentMaxColumns)));
+            Start += static_cast<std::size_t>(CurrentMaxColumns);
+        }
+    }
 }
 
 void MConsoleIO::RenderOutputWindow()
@@ -899,23 +943,18 @@ void MConsoleIO::RenderOutputWindow()
         const int SourceIndex = OutputVerticalScrollOffset + i;
         
         
-        if (SourceIndex >= static_cast<int>(LastOutputLinesWide.size()))
+        if (SourceIndex >= static_cast<int>(LastOutputRenderLines.size()))
         {
             break;
         }
 
-        const std::wstring& Line = LastOutputLinesWide[SourceIndex];
-        
-        if (OutputHorizontalScrollOffset >= static_cast<int>(Line.size()))
-        {
-            continue;
-        }
+        const std::wstring& Line = LastOutputRenderLines[SourceIndex];
         
         mvwaddnwstr(
             OutputWindow,
             i + 1,
             TextStartX,
-            Line.c_str() + OutputHorizontalScrollOffset,
+            Line.c_str(),
             MaxPrintableColumns);
     }
     
@@ -930,14 +969,14 @@ bool MConsoleIO::HandleTerminalTooSmall(int TerminalWidth, int TerminalHeight)
     
     if (bTerminalTooSmall)
     {
-        RenderTerminalToSmall(TerminalWidth, TerminalHeight);
+        RenderTerminalTooSmall(TerminalWidth, TerminalHeight);
         return true;
     }
     
     return false;
 }
 
-void MConsoleIO::RenderTerminalToSmall(int TerminalWidth, int TerminalHeight)
+void MConsoleIO::RenderTerminalTooSmall(int TerminalWidth, int TerminalHeight)
 {
     clear();
     mvprintw(1, 2, "TERMINAL TOO SMALL");
@@ -946,13 +985,13 @@ void MConsoleIO::RenderTerminalToSmall(int TerminalWidth, int TerminalHeight)
     refresh();
 }
 
-std::string MConsoleIO::BuildProgressBar(float PositionSec, float DuractionSec, int BarWidth)
+std::string MConsoleIO::BuildProgressBar(float PositionSec, float DurationSec, int BarWidth)
 {
     float Progress = 0.f;
     
-    if (DuractionSec > 0.f)
+    if (DurationSec > 0.f)
     {
-        Progress = PositionSec / DuractionSec;
+        Progress = PositionSec / DurationSec;
     }
     
     Progress = std::clamp(Progress, 0.f, 1.f);
@@ -1011,7 +1050,7 @@ FTUILayout MConsoleIO::BuildTUILayout(int TerminalWidth, int TerminalHeight)
     Layout.InputHeight = MinimumInputWindowHeight;
     Layout.OutputHeight = TerminalHeight - Layout.StatusHeight - Layout.InputHeight;
     
-    if (Layout.OutputHeight < MinimumOutputWindowHeight);
+    if (Layout.OutputHeight < MinimumOutputWindowHeight)
     {
         Layout.OutputHeight = MinimumOutputWindowHeight;
         Layout.StatusHeight = TerminalHeight - Layout.InputHeight - Layout.OutputHeight;

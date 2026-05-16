@@ -5,7 +5,7 @@ Terminal Audio Player is a small C++ learning project.
 The goal is to build a terminal-based audio player while practicing basic software architecture:
 input handling, terminal UI, command processing, state management, track library scanning, and audio playback.
 
-Current project version: `0.15`
+Current project version: `0.16`
 
 ## Status
 
@@ -131,8 +131,7 @@ exit
 The output window supports scrolling:
 
 ```text
-Up / Down      vertical output scroll
-Left / Right   horizontal output scroll
+Up / Down / Mouse Wheel    vertical output scroll
 ```
 
 Minimum terminal size:
