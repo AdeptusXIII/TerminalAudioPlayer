@@ -73,6 +73,25 @@ From the directory where you downloaded the AppImage:
 chmod +x TerminalAudioPlayer-x86_64.AppImage
 ./TerminalAudioPlayer-x86_64.AppImage
 ```
+Or launch it from the file manager by running the .AppImage file directly.
+
+Theoretically, this launch method is supported by the following terminals:
+
+```
+console
+gnome-terminal
+kgx
+xfce4-terminal
+mate-terminal
+lxterminal
+qterminal
+kitty
+alacritty
+wezterm
+xterm
+```
+
+I don't have the opportunity to test everything. Everything works fine on my alacritty.
 
 If AppImage mounting through FUSE is not available on your system:
 
