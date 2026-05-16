@@ -48,8 +48,41 @@ copy_runtime_libraries "$APPDIR/usr/bin/terminal_player"
 cat > "$APPDIR/AppRun" <<'APPRUN'
 #!/usr/bin/env bash
 HERE="$(dirname "$(readlink -f "$0")")"
+PLAYER="$HERE/usr/bin/terminal_player"
+
 export LD_LIBRARY_PATH="$HERE/usr/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-exec "$HERE/usr/bin/terminal_player" "$@"
+
+if [[ -t 0 && -t 1 ]]; then
+    exec "$PLAYER" "$@"
+fi
+
+if command -v konsole >/dev/null 2>&1; then
+    exec konsole -e "$PLAYER" "$@"
+elif command -v gnome-terminal >/dev/null 2>&1; then
+    exec gnome-terminal -- "$PLAYER" "$@"
+elif command -v kgx >/dev/null 2>&1; then
+    exec kgx -- "$PLAYER" "$@"
+elif command -v xfce4-terminal >/dev/null 2>&1; then
+    exec xfce4-terminal -x "$PLAYER" "$@"
+elif command -v mate-terminal >/dev/null 2>&1; then
+    exec mate-terminal -- "$PLAYER" "$@"
+elif command -v lxterminal >/dev/null 2>&1; then
+    exec lxterminal -e "$PLAYER" "$@"
+elif command -v qterminal >/dev/null 2>&1; then
+    exec qterminal -e "$PLAYER" "$@"
+elif command -v kitty >/dev/null 2>&1; then
+    exec kitty "$PLAYER" "$@"
+elif command -v alacritty >/dev/null 2>&1; then
+    exec alacritty -e "$PLAYER" "$@"
+elif command -v wezterm >/dev/null 2>&1; then
+    exec wezterm start -- "$PLAYER" "$@"
+elif command -v xterm >/dev/null 2>&1; then
+    exec xterm -e "$PLAYER" "$@"
+fi
+
+echo "TerminalAudioPlayer requires a terminal emulator to run." >&2
+echo "Run this AppImage from a terminal, or install konsole, gnome-terminal, kgx, xfce4-terminal, kitty, alacritty, wezterm, or xterm." >&2
+exit 1
 APPRUN
 chmod +x "$APPDIR/AppRun"
 
