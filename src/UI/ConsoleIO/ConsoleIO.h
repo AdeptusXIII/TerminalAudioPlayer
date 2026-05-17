@@ -59,10 +59,13 @@ public:
     void ResizeTUI();
     void ShutDownTUI();
     void RenderStatusWindow(const FUISnapshotData& UISnapshot, const FTrackInfo &TrackInfo);
-    void RenderInputWindow(const std::string& InputBuffer);
+    void RenderInputWindow(const std::string& InputBuffer, std::size_t CursorIndex);
     FCommand ParseCommandLine(const std::string &Input);
     int ReadInputKey();
     void ScrollOutputWindowVertical(int DeltaLines);
+    
+    std::string GetNextCommandFromHistory();
+    std::string GetPreviousCommandFromHistory();
     bool GetTerminalTooSmall() const { return bTerminalTooSmall; }
 
     //------------------------------------------------------------------------------------------------------------------
@@ -90,21 +93,17 @@ private:
     
     std::vector<std::string> LastOutputLines;
     std::vector<std::wstring> LastOutputRenderLines;
+    std::vector<std::string> CommandHistory;
     
     int StatusWindowHeight;
     int OutputWindowHeight;
     int InputWindowHeight;
     
     int OutputVerticalScrollOffset;
+    int CommandHistoryIndex;
 
     bool bTUIActive;
     bool bTerminalTooSmall;
-    //------------------------------------------------------------------------------------------------------------------
-    
-    
-    /** Standard COUT-CommandLine-style */
-    //------------------------------------------------------------------------------------------------------------------
-    int CommandHelpIndentation;
     //------------------------------------------------------------------------------------------------------------------
     
     
@@ -124,6 +123,7 @@ private:
     std::wstring ConvertUtf8ToWide(const std::string& Text) const;
     FTUILayout BuildTUILayout(int TerminalWidth, int TerminalHeight);
     FWindowTextArea BuildWindowTextArea(WINDOW* Window);
+    void WriteCommandToHistory(const std::string &Command);
     //------------------------------------------------------------------------------------------------------------------
     
     

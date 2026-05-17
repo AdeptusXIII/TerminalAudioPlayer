@@ -29,6 +29,11 @@ public:
 
 private: // --- Functions ---
     
+    void RenderTUIFrame(const std::string& InputBuffer, const std::size_t &InputCursorIndex);
+    bool HandleTUIControlKey(int Ch, std::string& InputBuffer, std::size_t &InputCursorIndex);
+    void HandleTUIEnter(std::string& InputBuffer, std::size_t &InputCursorIndex);
+    void HandleTUITextInput(int Ch, std::string& InputBuffer, std::size_t &InputCursorIndex);
+    
     void ExecuteCommandPrompt(const FCommand &InCommandPrompt);
     
     void HandleModeCommand(const std::string &Arg);

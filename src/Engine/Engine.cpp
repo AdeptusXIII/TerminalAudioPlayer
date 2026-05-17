@@ -89,77 +89,126 @@ void MEngine::RunTUILoop()
     ConsoleIO.InitTUI();
 
     std::string InputBuffer;
+    std::size_t InputCursorIndex = 0;
 
     while (!bWantExit)
     {
-        if (ConsoleIO.GetTerminalTooSmall())
-        {
-            const int Ch = ConsoleIO.ReadInputKey();
+        SyncAudioState();
 
-            if (Ch == KEY_RESIZE)
-            {
-                ConsoleIO.ResizeTUI();
-            }
-
-            std::this_thread::sleep_for(std::chrono::milliseconds(30));
-            continue;
-        }
-    
-        ConsoleIO.RenderStatusWindow(BuildUISnapshotData(), BuildTrackInfoData());
-        ConsoleIO.RenderInputWindow(InputBuffer);
-
-        const int Ch = ConsoleIO.ReadInputKey();
-
-        if (Ch == ERR)
-        {
-            std::this_thread::sleep_for(std::chrono::milliseconds(30));
-            continue;
-        }
-
-        if (Ch == '\n' || Ch == KEY_ENTER || Ch == 10 || Ch == 13)
-        {
-            FCommand Command = ConsoleIO.ParseCommandLine(InputBuffer);
-            ExecuteCommandPrompt(Command);
-            InputBuffer.clear();
-        }
-        else if (Ch == KEY_BACKSPACE || Ch == 127 || Ch == 8)
-        {
-            if (!InputBuffer.empty())
-            {
-                InputBuffer.pop_back();
-            }
-        }
-        else if (Ch == KEY_MOUSE || Ch == 27)
-        {
-            int DiscardedCh = ConsoleIO.ReadInputKey();
-            while (DiscardedCh != ERR)
-            {
-                DiscardedCh = ConsoleIO.ReadInputKey();
-            }
-            continue;
-        }
-        else if (Ch == KEY_UP)
-        {
-            ConsoleIO.ScrollOutputWindowVertical(-1);
-        }
-        else if (Ch == KEY_DOWN)
-        {
-            ConsoleIO.ScrollOutputWindowVertical(1);
-        }
-        else if (Ch == KEY_RESIZE)
-        {
-            ConsoleIO.ResizeTUI();
-        }
-        else if (Ch >= 32 && Ch <= 126)
-        {
-            InputBuffer.push_back(static_cast<char>(Ch));
-        }
+        RenderTUIFrame(InputBuffer, InputCursorIndex);
         
-        std::this_thread::sleep_for(std::chrono::milliseconds(30));
+        int Ch = ConsoleIO.ReadInputKey();
+
+        if (HandleTUIControlKey(Ch, InputBuffer, InputCursorIndex))
+        {
+            RenderTUIFrame(InputBuffer, InputCursorIndex);
+            continue;
+        }
+
+        if (Ch == '\n')
+        {
+            HandleTUIEnter(InputBuffer, InputCursorIndex);
+        }
+        else
+        {
+            HandleTUITextInput(Ch, InputBuffer, InputCursorIndex);
+        }
+
+        RenderTUIFrame(InputBuffer, InputCursorIndex);
     }
 
     ConsoleIO.ShutDownTUI();
     StopAudioSyncThread();
+}
+
+void MEngine::RenderTUIFrame(const std::string &InputBuffer, const std::size_t &InputCursorIndex)
+{
+    if (ConsoleIO.GetTerminalTooSmall()) return;
+    ConsoleIO.RenderStatusWindow(BuildUISnapshotData(), BuildTrackInfoData());
+    ConsoleIO.RenderInputWindow(InputBuffer, InputCursorIndex);
+}
+
+bool MEngine::HandleTUIControlKey(int Ch, std::string &InputBuffer, std::size_t &InputCursorIndex)
+{
+    if (Ch == KEY_RESIZE)
+    {
+        ConsoleIO.ResizeTUI();
+        return true;
+    }
+
+    if (ConsoleIO.GetTerminalTooSmall())
+    {
+        return true;
+    }
+
+    if (Ch == KEY_UP)
+    {
+        InputBuffer = ConsoleIO.GetPreviousCommandFromHistory();
+        InputCursorIndex = InputBuffer.size();
+        return true;
+    }
+
+    if (Ch == KEY_DOWN)
+    {
+        InputBuffer = ConsoleIO.GetNextCommandFromHistory();
+        InputCursorIndex = InputBuffer.size();
+        return true;
+    }
+    
+    if (Ch == KEY_LEFT)
+    {
+        if (InputCursorIndex > 0) InputCursorIndex--;
+        return true;
+    }
+    
+    if (Ch == KEY_RIGHT)
+    {
+        if (InputCursorIndex < InputBuffer.size()) InputCursorIndex++;
+        return true;
+    }
+
+    if (Ch == KEY_SR)
+    {
+        ConsoleIO.ScrollOutputWindowVertical(-1);
+        return true;
+    }
+
+    if (Ch == KEY_SF)
+    {
+        ConsoleIO.ScrollOutputWindowVertical(1);
+        return true;
+    }
+
+    return false;
+}
+
+void MEngine::HandleTUIEnter(std::string &InputBuffer, std::size_t &InputCursorIndex)
+{
+    FCommand Command = ConsoleIO.ParseCommandLine(InputBuffer);
+
+    InputBuffer.clear();
+    
+
+    ExecuteCommandPrompt(Command);
+}
+
+void MEngine::HandleTUITextInput(int Ch, std::string &InputBuffer, std::size_t &InputCursorIndex)
+{
+    if (Ch == KEY_BACKSPACE || Ch == 127)
+    {
+        if (!InputBuffer.empty())
+        {
+            InputBuffer.erase(InputCursorIndex - 1, 1);
+            InputCursorIndex--;
+        }
+        return;
+    }
+
+    if (Ch >= 32 && Ch <= 126)
+    {
+        InputBuffer.insert(InputCursorIndex, 1, static_cast<char>(Ch));
+        InputCursorIndex++;
+    }
 }
 
 void MEngine::ExecuteCommandPrompt(const FCommand &InCommandPrompt)
@@ -339,6 +388,7 @@ void MEngine::HandleModeCommand(const std::string &Arg)
         else
         {
             ConsoleIO.PrintOutputMessage(stp::msg::APP_ERROR_MSG);
+            ConsoleIO.PrintOutputMessage(stp::msg::fnc::APP_FNC_INVALID_ARG_MSG);
         }
     }
 }

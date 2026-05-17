@@ -26,9 +26,9 @@ MConsoleIO::MConsoleIO()
     OutputWindowHeight = 0;
     InputWindowHeight = MinimumInputWindowHeight;
     OutputVerticalScrollOffset = 0;
+    CommandHistoryIndex = 0;
     bTUIActive = false;
     bTerminalTooSmall = false;
-    CommandHelpIndentation = static_cast<int>(std::strlen(stp::sep::SUBCAT_SEP_TAB));
 }
 
 void MConsoleIO::InitTUI()
@@ -114,20 +114,25 @@ void MConsoleIO::RenderStatusWindow(const FUISnapshotData &UISnapshot, const FTr
     wrefresh(StatusWindow);
 }
 
-void MConsoleIO::RenderInputWindow(const std::string &InputBuffer)
+void MConsoleIO::RenderInputWindow(const std::string &InputBuffer, std::size_t CursorIndex)
 {
     werase(InputWindow);
     box(InputWindow, 0, 0);
+    
+    const int PromptStartX = 2;
+    const std::string Prompt = "Enter command: ";
+    const int TextStartX = PromptStartX + static_cast<int>(Prompt.size());
 
-    mvwprintw(InputWindow, 1, 2, "Enter command: %s", InputBuffer.c_str());
+    mvwprintw(InputWindow, 1, PromptStartX, "%s%s", Prompt.c_str(), InputBuffer.c_str());
 
-    wmove(InputWindow, 1, 17 + static_cast<int>(InputBuffer.size()));
+    wmove(InputWindow, 1, TextStartX + static_cast<int>(CursorIndex));
     wrefresh(InputWindow);
 }
 
 FCommand MConsoleIO::ParseCommandLine(const std::string &Input)
 {
     FCommand Command;
+    bool CommandTypeValid = false;
 
     std::vector<std::string> Tokens;
     std::istringstream Stream(Input);
@@ -143,66 +148,81 @@ FCommand MConsoleIO::ParseCommandLine(const std::string &Input)
     if (Tokens[0] == ct::CommandTypeToString(ECommandType::Play)) 
     {
         Command.Type = ECommandType::Play;
+        CommandTypeValid = true;
     }
     if (Tokens[0] == ct::CommandTypeToString(ECommandType::Pause)) 
     {
         Command.Type = ECommandType::Pause;
+        CommandTypeValid = true;
     }
     if (Tokens[0] == ct::CommandTypeToString(ECommandType::Stop)) 
     {
         Command.Type = ECommandType::Stop;
+        CommandTypeValid = true;
     }
     if (Tokens[0] == ct::CommandTypeToString(ECommandType::Next)) 
     {
         Command.Type = ECommandType::Next;
+        CommandTypeValid = true;
     }
     if (Tokens[0] == ct::CommandTypeToString(ECommandType::Prev)) 
     {
         Command.Type = ECommandType::Prev;
+        CommandTypeValid = true;
     }
     if (Tokens[0] == ct::CommandTypeToString(ECommandType::List)) 
     {
         Command.Type = ECommandType::List;
+        CommandTypeValid = true;
     }
     if (Tokens[0] == ct::CommandTypeToString(ECommandType::Refresh)) 
     {
         Command.Type = ECommandType::Refresh;
+        CommandTypeValid = true;
     }
     if (Tokens[0] == ct::CommandTypeToString(ECommandType::Exit)) 
     {
         Command.Type = ECommandType::Exit;
+        CommandTypeValid = true;
     }
     if (Tokens[0] == ct::CommandTypeToString(ECommandType::Help)) 
     {
         Command.Type = ECommandType::Help;
         if (Tokens.size() >= 2) Command.Args.emplace_back(Tokens[1]);
+        CommandTypeValid = true;
     }
     if (Tokens[0] == ct::CommandTypeToString(ECommandType::Mode)) 
     {
         Command.Type = ECommandType::Mode;
         if (Tokens.size() >= 2) Command.Args.emplace_back(Tokens[1]);
+        CommandTypeValid = true;
     }
     if (Tokens[0] == ct::CommandTypeToString(ECommandType::Select)) 
     {
         Command.Type = ECommandType::Select;
         if (Tokens.size() >= 2) Command.Args.emplace_back(Tokens[1]);
+        CommandTypeValid = true;
     }
     if (Tokens[0] == ct::CommandTypeToString(ECommandType::Volume)) 
     {
         Command.Type = ECommandType::Volume;
         if (Tokens.size() >= 2) Command.Args.emplace_back(Tokens[1]);
+        CommandTypeValid = true;
     }
     if (Tokens[0] == ct::CommandTypeToString(ECommandType::Status)) 
     {
         Command.Type = ECommandType::Status;
+        CommandTypeValid = true;
     }
     if (Tokens[0] == ct::CommandTypeToString(ECommandType::Find)) 
     {
         Command.Type = ECommandType::Find;
         if (Tokens.size() >= 2) Command.Args.emplace_back(Tokens[1]);
+        CommandTypeValid = true;
     }
-
+    
     Command.RawInput = Input;
+    WriteCommandToHistory(Command.RawInput);
     return Command;
 }
 
@@ -232,6 +252,35 @@ void MConsoleIO::ScrollOutputWindowVertical(int DeltaLines)
         OutputVerticalScrollOffset = MaxScrollOffset;
     
     RenderOutputWindow();
+}
+
+std::string MConsoleIO::GetNextCommandFromHistory()
+{
+    if (CommandHistory.empty()) return "";
+    
+    if (CommandHistoryIndex < CommandHistory.size() - 1)
+    {
+        CommandHistoryIndex++;
+    }
+    
+    if (CommandHistoryIndex == CommandHistory.size())
+    {
+        return "";
+    }
+    
+    return CommandHistory[CommandHistoryIndex];
+}
+
+std::string MConsoleIO::GetPreviousCommandFromHistory()
+{
+    if (CommandHistory.empty()) return "";
+    
+    if (CommandHistoryIndex > 0)
+    {
+        CommandHistoryIndex--;
+    }
+    
+    return CommandHistory[CommandHistoryIndex];
 }
 
 FCommand MConsoleIO::ReadCommand()
@@ -410,7 +459,7 @@ void MConsoleIO::PrintCommandHelp()
     
     for (const FHelpEntry& HelpEntry : HelpEntries)
     {
-        size_t Padding = MaxUsageLen - HelpEntry.Usage.size() + CommandHelpIndentation;
+        size_t Padding = MaxUsageLen - HelpEntry.Usage.size() + static_cast<int>(std::strlen(stp::sep::SUBCAT_SEP_TAB));
         Lines.emplace_back(HelpEntry.Usage + std::string(Padding, ' ') + HelpEntry.Description);
     }
     
@@ -781,6 +830,9 @@ void MConsoleIO::CreateTUIWindows(const FTUILayout &Layout)
     OutputWindow = newwin(OutputWindowHeight, Layout.Width, StatusWindowHeight, 0);
     InputWindow = newwin(InputWindowHeight, Layout.Width, StatusWindowHeight + OutputWindowHeight, 0);
 
+    leaveok(StatusWindow, TRUE);
+    leaveok(OutputWindow, TRUE);
+    leaveok(InputWindow, FALSE);
     
     scrollok(StatusWindow, FALSE);
     scrollok(OutputWindow, FALSE);
@@ -1062,6 +1114,18 @@ FWindowTextArea MConsoleIO::BuildWindowTextArea(WINDOW *Window)
     if (TextArea.Width < 0)  TextArea.Width = 0;
     
     return TextArea;
+}
+
+void MConsoleIO::WriteCommandToHistory(const std::string &Command)
+{
+    if (Command.empty())
+    {
+        CommandHistoryIndex = static_cast<int>(CommandHistory.size());
+        return;
+    }
+    
+    CommandHistory.emplace_back(Command);
+    CommandHistoryIndex = static_cast<int>(CommandHistory.size());
 }
 
 std::string MConsoleIO::FormatTime(float sec)
