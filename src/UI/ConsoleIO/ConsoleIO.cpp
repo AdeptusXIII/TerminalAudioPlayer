@@ -114,7 +114,7 @@ void MConsoleIO::RenderStatusWindow(const FUISnapshotData &UISnapshot, const FTr
     wrefresh(StatusWindow);
 }
 
-void MConsoleIO::RenderInputWindow(const std::string &InputBuffer, std::size_t CursorIndex)
+void MConsoleIO::RenderInputWindow(const std::wstring &InputBuffer, std::size_t CursorIndex)
 {
     werase(InputWindow);
     box(InputWindow, 0, 0);
@@ -122,8 +122,15 @@ void MConsoleIO::RenderInputWindow(const std::string &InputBuffer, std::size_t C
     const int PromptStartX = 2;
     const std::string Prompt = "Enter command: ";
     const int TextStartX = PromptStartX + static_cast<int>(Prompt.size());
+    const FWindowTextArea InputTextArea = BuildWindowTextArea(InputWindow);
+    const int MaxPrintableColumns = InputTextArea.Width - static_cast<int>(Prompt.size());
 
-    mvwprintw(InputWindow, 1, PromptStartX, "%s%s", Prompt.c_str(), InputBuffer.c_str());
+    mvwprintw(InputWindow, 1, PromptStartX, "%s", Prompt.c_str());
+    
+    if (MaxPrintableColumns > 0)
+    {
+        mvwaddnwstr(InputWindow, 1, TextStartX, InputBuffer.c_str(), MaxPrintableColumns);
+    }
 
     wmove(InputWindow, 1, TextStartX + static_cast<int>(CursorIndex));
     wrefresh(InputWindow);
@@ -226,13 +233,31 @@ FCommand MConsoleIO::ParseCommandLine(const std::string &Input)
     return Command;
 }
 
-int MConsoleIO::ReadInputKey()
+FTUIInputEvent MConsoleIO::ReadInputEvent()
 {
-    if (InputWindow == nullptr)
+    FTUIInputEvent Event = {};
+    
+    if (InputWindow == nullptr) return Event;
+    
+    wint_t Input = 0;
+    int Result = wget_wch(InputWindow, &Input);
+    
+    if (Result == ERR) return Event;
+    
+    Event.bHasInput = true;
+    
+    if (Result == KEY_CODE_YES)
     {
-        return getch();
+        Event.bIsSpecialKey = true;
+        Event.KeyCode = static_cast<int>(Input);
     }
-    return wgetch(InputWindow);
+    else
+    {
+        Event.bIsSpecialKey = false;
+        Event.Character = static_cast<wchar_t>(Input);
+    }
+    
+    return Event;
 }
 
 void MConsoleIO::ScrollOutputWindowVertical(int DeltaLines)
@@ -242,7 +267,8 @@ void MConsoleIO::ScrollOutputWindowVertical(int DeltaLines)
     if (OutputVerticalScrollOffset < 0) 
         OutputVerticalScrollOffset = 0;
     
-    const int MaxPrintableLines = OutputWindowHeight - 2;
+    const FWindowTextArea OutputTextArea = BuildWindowTextArea(OutputWindow);
+    const int MaxPrintableLines = OutputTextArea.Height;
     int MaxScrollOffset = static_cast<int>(LastOutputRenderLines.size()) - MaxPrintableLines;
     
     if (MaxScrollOffset < 0) 
@@ -254,33 +280,33 @@ void MConsoleIO::ScrollOutputWindowVertical(int DeltaLines)
     RenderOutputWindow();
 }
 
-std::string MConsoleIO::GetNextCommandFromHistory()
+std::wstring MConsoleIO::GetNextCommandFromHistory()
 {
-    if (CommandHistory.empty()) return "";
+    if (CommandHistory.empty()) return L"";
     
-    if (CommandHistoryIndex < CommandHistory.size() - 1)
+    if (CommandHistoryIndex < static_cast<int>(CommandHistory.size()))
     {
         CommandHistoryIndex++;
     }
     
-    if (CommandHistoryIndex == CommandHistory.size())
+    if (CommandHistoryIndex == static_cast<int>(CommandHistory.size()))
     {
-        return "";
+        return L"";
     }
     
-    return CommandHistory[CommandHistoryIndex];
+    return ConvertUtf8ToWide(CommandHistory[CommandHistoryIndex]);
 }
 
-std::string MConsoleIO::GetPreviousCommandFromHistory()
+std::wstring MConsoleIO::GetPreviousCommandFromHistory()
 {
-    if (CommandHistory.empty()) return "";
+    if (CommandHistory.empty()) return L"";
     
     if (CommandHistoryIndex > 0)
     {
         CommandHistoryIndex--;
     }
     
-    return CommandHistory[CommandHistoryIndex];
+    return ConvertUtf8ToWide(CommandHistory[CommandHistoryIndex]);
 }
 
 FCommand MConsoleIO::ReadCommand()
@@ -1074,6 +1100,30 @@ std::wstring MConsoleIO::ConvertUtf8ToWide(const std::string &Text) const
 
     std::mbsrtowcs(Result.data(), &Source, Result.size(), &State);
 
+    return Result;
+}
+
+std::string MConsoleIO::ConvertWideToUtf8(const std::wstring &Text) const
+{
+    if (Text.empty()) return "";
+    
+    std::mbstate_t State{};
+    const wchar_t* Source = Text.c_str();
+    
+    const std::size_t RequiredSize = std::wcsrtombs(nullptr, &Source, 0, &State);
+    
+    if (RequiredSize == static_cast<std::size_t>(-1))
+    {
+        return "";
+    }
+    
+    std::string Result(RequiredSize, '\0');
+    
+    State = std::mbstate_t{};
+    Source = Text.c_str();
+    
+    std::wcsrtombs(Result.data(), &Source, Result.size(), &State);
+    
     return Result;
 }
 

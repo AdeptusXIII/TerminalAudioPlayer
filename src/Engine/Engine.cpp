@@ -11,6 +11,7 @@
 #include <chrono>
 #include <cmath>
 #include <algorithm>
+#include <cwctype>
 
 MEngine::MEngine()
     
@@ -25,7 +26,7 @@ MEngine::MEngine()
 
 void MEngine::Init()
 {
-    std::string VersionNumber = "0.16";
+    std::string VersionNumber = "0.17";
     std::cout << stp::msg::ENGINE_INIT_MSG << VersionNumber << std::endl;
     
     FileManager.Init();   
@@ -88,7 +89,7 @@ void MEngine::RunTUILoop()
     StartAudioSyncThread();
     ConsoleIO.InitTUI();
 
-    std::string InputBuffer;
+    std::wstring InputBuffer;
     std::size_t InputCursorIndex = 0;
 
     while (!bWantExit)
@@ -96,22 +97,38 @@ void MEngine::RunTUILoop()
         SyncAudioState();
 
         RenderTUIFrame(InputBuffer, InputCursorIndex);
-        
-        int Ch = ConsoleIO.ReadInputKey();
 
-        if (HandleTUIControlKey(Ch, InputBuffer, InputCursorIndex))
+        FTUIInputEvent InputEvent = ConsoleIO.ReadInputEvent();
+
+        if (!InputEvent.bHasInput)
         {
-            RenderTUIFrame(InputBuffer, InputCursorIndex);
             continue;
         }
 
-        if (Ch == '\n')
+        if (InputEvent.bIsSpecialKey)
+        {
+            if (InputEvent.KeyCode == KEY_ENTER)
+            {
+                HandleTUIEnter(InputBuffer, InputCursorIndex);
+                RenderTUIFrame(InputBuffer, InputCursorIndex);
+                continue;
+            }
+            
+            if (HandleTUIControlKey(InputEvent.KeyCode, InputBuffer, InputCursorIndex))
+            {
+                RenderTUIFrame(InputBuffer, InputCursorIndex);
+            }
+
+            continue;
+        }
+
+        if (InputEvent.Character == L'\n')
         {
             HandleTUIEnter(InputBuffer, InputCursorIndex);
         }
         else
         {
-            HandleTUITextInput(Ch, InputBuffer, InputCursorIndex);
+            HandleTUICharacterInput(InputEvent.Character, InputBuffer, InputCursorIndex);
         }
 
         RenderTUIFrame(InputBuffer, InputCursorIndex);
@@ -121,16 +138,16 @@ void MEngine::RunTUILoop()
     StopAudioSyncThread();
 }
 
-void MEngine::RenderTUIFrame(const std::string &InputBuffer, const std::size_t &InputCursorIndex)
+void MEngine::RenderTUIFrame(const std::wstring &InputBuffer, std::size_t InputCursorIndex)
 {
     if (ConsoleIO.GetTerminalTooSmall()) return;
     ConsoleIO.RenderStatusWindow(BuildUISnapshotData(), BuildTrackInfoData());
     ConsoleIO.RenderInputWindow(InputBuffer, InputCursorIndex);
 }
 
-bool MEngine::HandleTUIControlKey(int Ch, std::string &InputBuffer, std::size_t &InputCursorIndex)
+bool MEngine::HandleTUIControlKey(int KeyCode, std::wstring& InputBuffer, std::size_t& InputCursorIndex)
 {
-    if (Ch == KEY_RESIZE)
+    if (KeyCode == KEY_RESIZE)
     {
         ConsoleIO.ResizeTUI();
         return true;
@@ -141,39 +158,49 @@ bool MEngine::HandleTUIControlKey(int Ch, std::string &InputBuffer, std::size_t 
         return true;
     }
 
-    if (Ch == KEY_UP)
+    if (KeyCode == KEY_UP)
     {
         InputBuffer = ConsoleIO.GetPreviousCommandFromHistory();
         InputCursorIndex = InputBuffer.size();
         return true;
     }
 
-    if (Ch == KEY_DOWN)
+    if (KeyCode == KEY_DOWN)
     {
         InputBuffer = ConsoleIO.GetNextCommandFromHistory();
         InputCursorIndex = InputBuffer.size();
         return true;
     }
     
-    if (Ch == KEY_LEFT)
+    if (KeyCode == KEY_LEFT)
     {
         if (InputCursorIndex > 0) InputCursorIndex--;
         return true;
     }
     
-    if (Ch == KEY_RIGHT)
+    if (KeyCode == KEY_RIGHT)
     {
         if (InputCursorIndex < InputBuffer.size()) InputCursorIndex++;
         return true;
     }
+    
+    if (KeyCode == KEY_BACKSPACE)
+    {
+        if (InputCursorIndex > 0)
+        {
+            InputBuffer.erase(InputCursorIndex - 1, 1);
+            InputCursorIndex--;
+        }
+        return true;
+    }
 
-    if (Ch == KEY_SR)
+    if (KeyCode == KEY_SR)
     {
         ConsoleIO.ScrollOutputWindowVertical(-1);
         return true;
     }
 
-    if (Ch == KEY_SF)
+    if (KeyCode == KEY_SF)
     {
         ConsoleIO.ScrollOutputWindowVertical(1);
         return true;
@@ -182,21 +209,21 @@ bool MEngine::HandleTUIControlKey(int Ch, std::string &InputBuffer, std::size_t 
     return false;
 }
 
-void MEngine::HandleTUIEnter(std::string &InputBuffer, std::size_t &InputCursorIndex)
+void MEngine::HandleTUIEnter(std::wstring& InputBuffer, std::size_t& InputCursorIndex)
 {
-    FCommand Command = ConsoleIO.ParseCommandLine(InputBuffer);
+    FCommand Command = ConsoleIO.ParseCommandLine(ConsoleIO.ConvertWideToUtf8(InputBuffer));
 
     InputBuffer.clear();
+    InputCursorIndex = 0;
     
-
     ExecuteCommandPrompt(Command);
 }
 
-void MEngine::HandleTUITextInput(int Ch, std::string &InputBuffer, std::size_t &InputCursorIndex)
+void MEngine::HandleTUICharacterInput(wchar_t Character, std::wstring& InputBuffer, std::size_t& InputCursorIndex)
 {
-    if (Ch == KEY_BACKSPACE || Ch == 127)
+    if (Character == 127 || Character == L'\b')
     {
-        if (!InputBuffer.empty())
+        if (InputCursorIndex > 0)
         {
             InputBuffer.erase(InputCursorIndex - 1, 1);
             InputCursorIndex--;
@@ -204,9 +231,9 @@ void MEngine::HandleTUITextInput(int Ch, std::string &InputBuffer, std::size_t &
         return;
     }
 
-    if (Ch >= 32 && Ch <= 126)
+    if (std::iswprint(Character))
     {
-        InputBuffer.insert(InputCursorIndex, 1, static_cast<char>(Ch));
+        InputBuffer.insert(InputCursorIndex, 1, Character);
         InputCursorIndex++;
     }
 }

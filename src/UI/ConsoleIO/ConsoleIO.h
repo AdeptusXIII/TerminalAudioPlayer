@@ -48,6 +48,14 @@ struct FWindowTextArea
     int Height = 0;
 };
 
+struct FTUIInputEvent
+{
+    bool bHasInput = false;
+    bool bIsSpecialKey = false;
+    int KeyCode = 0;
+    wchar_t Character = L'\0';
+};
+
 class MConsoleIO 
 {
 public:
@@ -59,14 +67,15 @@ public:
     void ResizeTUI();
     void ShutDownTUI();
     void RenderStatusWindow(const FUISnapshotData& UISnapshot, const FTrackInfo &TrackInfo);
-    void RenderInputWindow(const std::string& InputBuffer, std::size_t CursorIndex);
+    void RenderInputWindow(const std::wstring& InputBuffer, std::size_t CursorIndex);
     FCommand ParseCommandLine(const std::string &Input);
-    int ReadInputKey();
+    FTUIInputEvent ReadInputEvent();
     void ScrollOutputWindowVertical(int DeltaLines);
     
-    std::string GetNextCommandFromHistory();
-    std::string GetPreviousCommandFromHistory();
+    std::wstring GetNextCommandFromHistory();
+    std::wstring GetPreviousCommandFromHistory();
     bool GetTerminalTooSmall() const { return bTerminalTooSmall; }
+    std::string ConvertWideToUtf8(const std::wstring& Text) const;
 
     //------------------------------------------------------------------------------------------------------------------
     

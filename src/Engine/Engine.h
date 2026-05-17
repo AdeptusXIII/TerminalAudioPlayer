@@ -29,10 +29,10 @@ public:
 
 private: // --- Functions ---
     
-    void RenderTUIFrame(const std::string& InputBuffer, const std::size_t &InputCursorIndex);
-    bool HandleTUIControlKey(int Ch, std::string& InputBuffer, std::size_t &InputCursorIndex);
-    void HandleTUIEnter(std::string& InputBuffer, std::size_t &InputCursorIndex);
-    void HandleTUITextInput(int Ch, std::string& InputBuffer, std::size_t &InputCursorIndex);
+    void RenderTUIFrame(const std::wstring& InputBuffer, std::size_t InputCursorIndex);
+    bool HandleTUIControlKey(int KeyCode, std::wstring& InputBuffer, std::size_t& InputCursorIndex);
+    void HandleTUIEnter(std::wstring& InputBuffer, std::size_t& InputCursorIndex);
+    void HandleTUICharacterInput(wchar_t Character, std::wstring& InputBuffer, std::size_t& InputCursorIndex);
     
     void ExecuteCommandPrompt(const FCommand &InCommandPrompt);
     

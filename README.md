@@ -5,7 +5,7 @@ Terminal Audio Player is a small C++ learning project.
 The goal is to build a terminal-based audio player while practicing basic software architecture:
 input handling, terminal UI, command processing, state management, track library scanning, and audio playback.
 
-Current project version: `0.16`
+Current project version: `0.17`
 
 ## Status
 
@@ -17,6 +17,9 @@ The player is usable, but still experimental. It is mainly built as a learning p
 
 - Terminal UI based on `ncursesw`
 - UTF-8 terminal output
+- UTF-8 terminal input
+- Command history navigation
+- Editable input line with cursor movement
 - Track scanning from `~/Music/TAP_content`
 - Automatic content directory creation on first launch
 - Audio file filtering
@@ -33,7 +36,9 @@ The player is usable, but still experimental. It is mainly built as a learning p
 - Volume control
 - Track status with playback time
 - Scrollable command output
+- Word-wrapped command output
 - Terminal resize handling
+- Direct AppImage launch from a file manager, if a supported terminal emulator is installed
 - SFML 3 Audio backend
 
 ## Supported Formats
@@ -49,6 +54,7 @@ For the AppImage release:
 
 - Linux x86_64
 - UTF-8 terminal
+- UTF-8 locale
 - FUSE support for normal AppImage execution
 
 The AppImage bundles the required runtime libraries used by the player, including SFML Audio and ncursesw.
@@ -73,12 +79,12 @@ From the directory where you downloaded the AppImage:
 chmod +x TerminalAudioPlayer-x86_64.AppImage
 ./TerminalAudioPlayer-x86_64.AppImage
 ```
-Or launch it from the file manager by running the .AppImage file directly.
+Or launch it from the file manager by running the `.AppImage` file directly.
 
-Theoretically, this launch method is supported by the following terminals:
+This launch method needs a terminal emulator. The AppImage launcher currently tries these terminals:
 
-```
-console
+```text
+konsole
 gnome-terminal
 kgx
 xfce4-terminal
@@ -91,7 +97,7 @@ wezterm
 xterm
 ```
 
-I don't have the opportunity to test everything. Everything works fine on my alacritty.
+Not every terminal in this list has been tested. The file-manager launch path is confirmed to work with `alacritty`.
 
 If AppImage mounting through FUSE is not available on your system:
 
@@ -147,10 +153,26 @@ refresh
 exit
 ```
 
-The output window supports scrolling:
+## TUI Controls
+
+Input line:
 
 ```text
-Up / Down / Mouse Wheel    vertical output scroll
+Enter          run command
+Up             previous command from history
+Down           next command from history
+Left           move input cursor left
+Right          move input cursor right
+Backspace      delete character before cursor
+UTF-8 text     supported in the input line
+```
+
+Output window:
+
+```text
+Shift+Up       scroll output up, if supported by the terminal
+Shift+Down     scroll output down, if supported by the terminal
+Mouse Wheel    vertical output scroll, if supported by the terminal
 ```
 
 Minimum terminal size:
