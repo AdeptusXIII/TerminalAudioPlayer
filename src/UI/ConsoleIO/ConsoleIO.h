@@ -40,6 +40,14 @@ struct FTUILayout
     int Width = 0;
 };
 
+struct FWindowTextArea
+{
+    int StartX = 0;
+    int StartY = 0;
+    int Width = 0;
+    int Height = 0;
+};
+
 class MConsoleIO 
 {
 public:
@@ -115,6 +123,7 @@ private:
     bool IsUTF8Locale();
     std::wstring ConvertUtf8ToWide(const std::string& Text) const;
     FTUILayout BuildTUILayout(int TerminalWidth, int TerminalHeight);
+    FWindowTextArea BuildWindowTextArea(WINDOW* Window);
     //------------------------------------------------------------------------------------------------------------------
     
     

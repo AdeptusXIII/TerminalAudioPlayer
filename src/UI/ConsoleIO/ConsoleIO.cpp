@@ -819,18 +819,8 @@ void MConsoleIO::RebuildOutputRenderLines()
 {
     LastOutputRenderLines.clear();
     
-    int MaxPrintableColumns = 0;
-    
-    if (OutputWindow != nullptr)
-    {
-        int WindowHeight = 0;
-        int WindowWidth = 0;
-        getmaxyx(OutputWindow, WindowHeight, WindowWidth);
-        
-        const int TextStartX = 2;
-        const int RightPadding = 1;
-        MaxPrintableColumns = WindowWidth - TextStartX - RightPadding - 1;
-    }
+    const FWindowTextArea OutputTextArea = BuildWindowTextArea(OutputWindow);
+    const int MaxPrintableColumns = OutputTextArea.Width;
     
     for (const std::string &Line : LastOutputLines)
     {
@@ -921,16 +911,10 @@ void MConsoleIO::RenderOutputWindow()
     werase(OutputWindow);
     box(OutputWindow, 0, 0);
     
-    int WindowHeight = 0;
-    int WindowWidth = 0;
-    getmaxyx(OutputWindow, WindowHeight, WindowWidth);
+    const FWindowTextArea OutputTextArea = BuildWindowTextArea(OutputWindow);
     
-    const int TextStartX = 2;
-    const int RightPadding = 1;
-    
-    const int MaxPrintableLines = WindowHeight - 2;
-    const int MaxPrintableColumns = WindowWidth - TextStartX - RightPadding - 1;
-    
+    const int MaxPrintableColumns = OutputTextArea.Width;
+    const int MaxPrintableLines = OutputTextArea.Height;
     
     if (MaxPrintableLines <= 0 || MaxPrintableColumns <= 0)
     {
@@ -952,8 +936,8 @@ void MConsoleIO::RenderOutputWindow()
         
         mvwaddnwstr(
             OutputWindow,
-            i + 1,
-            TextStartX,
+            OutputTextArea.StartY + i,
+            OutputTextArea.StartX,
             Line.c_str(),
             MaxPrintableColumns);
     }
@@ -1057,6 +1041,27 @@ FTUILayout MConsoleIO::BuildTUILayout(int TerminalWidth, int TerminalHeight)
     }
     
     return Layout;
+}
+
+FWindowTextArea MConsoleIO::BuildWindowTextArea(WINDOW *Window)
+{
+    FWindowTextArea TextArea = {};
+    
+    if (Window == nullptr) return TextArea;
+    
+    int WindowHeight = 0;
+    int WindowWidth = 0;
+    getmaxyx(Window, WindowHeight, WindowWidth);
+    
+    TextArea.StartX = 2;
+    TextArea.StartY = 1;
+    TextArea.Width = WindowWidth - TextArea.StartX*2; // лево и право рамка + отступ
+    TextArea.Height = WindowHeight - TextArea.StartY*2; // верх и низ рамка
+    
+    if (TextArea.Height < 0) TextArea.Height = 0;
+    if (TextArea.Width < 0)  TextArea.Width = 0;
+    
+    return TextArea;
 }
 
 std::string MConsoleIO::FormatTime(float sec)
