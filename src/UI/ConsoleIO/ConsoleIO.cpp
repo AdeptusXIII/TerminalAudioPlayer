@@ -1181,7 +1181,38 @@ void MConsoleIO::WriteCommandToHistory(const std::string &Command)
         return;
     }
     
+    bool bOnlySpaces = true;
+    
+    for (char C : Command)
+    {
+        if (!std::isspace(static_cast<unsigned char>(C)))
+        {
+            bOnlySpaces = false;
+            break;
+        }
+    }
+    
+    if (bOnlySpaces)
+    {
+        CommandHistoryIndex = static_cast<int>(CommandHistory.size());
+        return;
+    }
+    
+    if (!CommandHistory.empty() && CommandHistory.back() == Command)
+    {
+        CommandHistoryIndex = static_cast<int>(CommandHistory.size());\
+        return;
+    }
+        
     CommandHistory.emplace_back(Command);
+    
+    constexpr std::size_t MaxCommandHistorySize = 100;
+    
+    if (CommandHistory.size() > MaxCommandHistorySize)
+    {
+        CommandHistory.erase(CommandHistory.begin());
+    }
+    
     CommandHistoryIndex = static_cast<int>(CommandHistory.size());
 }
 
