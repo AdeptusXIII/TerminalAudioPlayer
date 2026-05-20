@@ -44,6 +44,9 @@ void MConsoleIO::InitTUI()
     cbreak(); // читать сразу
     noecho(); // символы не печатаются автоматически
     curs_set(1); //курсор виден
+    
+    keypad(stdscr, TRUE);
+    nodelay(stdscr, TRUE);
 
     bTUIActive = true;
     
@@ -237,10 +240,14 @@ FTUIInputEvent MConsoleIO::ReadInputEvent()
 {
     FTUIInputEvent Event = {};
     
-    if (InputWindow == nullptr) return Event;
+    WINDOW *SourceWindow = InputWindow;
+    if (SourceWindow == nullptr)
+    {
+        SourceWindow = stdscr;
+    }
     
     wint_t Input = 0;
-    int Result = wget_wch(InputWindow, &Input);
+    int Result = wget_wch(SourceWindow, &Input);
     
     if (Result == ERR) return Event;
     
