@@ -8,6 +8,7 @@
 #include "TrackLibrary/TrackLibraryStorage.h"
 #include "Audio/AudioFileScanner.h"
 #include "UI/ConsoleIO/ConsoleIO.h"
+#include "System/PowerEventWatcher.h"
 
 #include <string>
 #include <thread>
@@ -69,6 +70,10 @@ private: // --- Functions ---
     
     void StartAudioSyncThread();
     void StopAudioSyncThread();
+    void StartPowerEventWatcher();
+    void StopPowerEventWatcher();
+    void HandleSystemSleepStart();
+    void HandleSystemResume();
     
     FUISnapshotData BuildUISnapshotData();
     FTrackInfo BuildTrackInfoData();
@@ -79,6 +84,7 @@ private: // --- Variables ---
     EPlaybackMode PlaybackMode;
     
     bool bWantExit;
+    bool bPausedBySystemSleep;
     
     float CurrentVolume;
     
@@ -92,4 +98,5 @@ private: // --- Variables ---
     MTrackLibraryStorage TrackLibraryStorage;
     MAudioFileScanner AudioFileScanner;
     MConsoleIO ConsoleIO;
+    MPowerEventWatcher PowerEventWatcher;
 };

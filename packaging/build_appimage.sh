@@ -26,6 +26,7 @@ copy_runtime_libraries() {
             /usr/lib/libsfml-*.so*|\
             /usr/lib/libncursesw.so*|\
             /usr/lib/libformw.so*|\
+            /usr/lib/libsystemd.so*|\
             /usr/lib/libvorbis*.so*|\
             /usr/lib/libFLAC.so*|\
             /usr/lib/libogg.so*)

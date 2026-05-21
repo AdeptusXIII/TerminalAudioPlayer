@@ -41,6 +41,7 @@ MEngine::MEngine()
     AudioPlayerState = EAudioPlayerState::Idle;
     PlaybackMode = EPlaybackMode::LoopAll;
     bWantExit = false;
+    bPausedBySystemSleep = false;
     CurrentVolume = 100;
     
     const char* HomeEnv = std::getenv("HOME");
@@ -54,11 +55,22 @@ MEngine::MEngine()
     }
 
     bAudioSyncThreadRunning = false;
+    PowerEventWatcher.SetPrepareForSleepCallback([this](bool bPreparingForSleep)
+    {
+        if (bPreparingForSleep)
+        {
+            HandleSystemSleepStart();
+        }
+        else
+        {
+            HandleSystemResume();
+        }
+    });
 }
 
 void MEngine::Init()
 {
-    std::string VersionNumber = "0.18";
+    std::string VersionNumber = "0.18.1";
     std::cout << stp::msg::ENGINE_INIT << VersionNumber << std::endl;
     
     TrackLibraryStorage.EnsureStorageFileExists();
@@ -113,17 +125,20 @@ void MEngine::SyncAudioState()
 void MEngine::RunCommandLineLoop()
 {
     StartAudioSyncThread();
+    StartPowerEventWatcher();
     while (!bWantExit)
     {
         FCommand Command = ConsoleIO.ReadCommand();
         ExecuteCommandPrompt(Command);
     }
+    StopPowerEventWatcher();
     StopAudioSyncThread();
 }
 
 void MEngine::RunTUILoop()
 {
     StartAudioSyncThread();
+    StartPowerEventWatcher();
     ConsoleIO.InitTUI();
 
     std::wstring InputBuffer;
@@ -172,6 +187,7 @@ void MEngine::RunTUILoop()
     }
 
     ConsoleIO.ShutDownTUI();
+    StopPowerEventWatcher();
     StopAudioSyncThread();
 }
 
@@ -1311,6 +1327,38 @@ void MEngine::StopAudioSyncThread()
     {
         AudioSyncThread.join();
     }
+}
+
+void MEngine::StartPowerEventWatcher()
+{
+    PowerEventWatcher.Start();
+}
+
+void MEngine::StopPowerEventWatcher()
+{
+    PowerEventWatcher.Stop();
+}
+
+void MEngine::HandleSystemSleepStart()
+{
+    std::lock_guard<std::mutex> Lock(EngineMutex);
+
+    if (AudioPlayerState != EAudioPlayerState::Playing)
+    {
+        bPausedBySystemSleep = false;
+        return;
+    }
+
+    AudioBackend.PauseTrack();
+    SetAudioPlayerState(EAudioPlayerState::Paused);
+    bPausedBySystemSleep = true;
+}
+
+void MEngine::HandleSystemResume()
+{
+    std::lock_guard<std::mutex> Lock(EngineMutex);
+
+    bPausedBySystemSleep = false;
 }
 
 FUISnapshotData MEngine::BuildUISnapshotData() 

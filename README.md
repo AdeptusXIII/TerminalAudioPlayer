@@ -5,7 +5,7 @@ Terminal Audio Player is a small C++ learning project.
 The goal is to build a terminal-based audio player while practicing basic software architecture:
 input handling, terminal UI, command processing, state management, track library scanning, and audio playback.
 
-Current project version: `0.18`
+Current project version: `0.18.1`
 
 ## Status
 
@@ -42,6 +42,7 @@ The player is usable, but still experimental. It is mainly built as a learning p
 - Scrollable command output
 - Word-wrapped command output
 - Terminal resize handling
+- systemd sleep/hibernate handling: playback pauses before sleep and does not auto-resume
 - Direct AppImage launch from a file manager, if a supported terminal emulator is installed
 - SFML 3 Audio backend
 
@@ -270,11 +271,13 @@ Build requirements:
 - Ninja
 - SFML 3 Audio
 - ncursesw
+- systemd/libsystemd development headers
+- pkgconf
 
 On Arch/CachyOS:
 
 ```bash
-sudo pacman -S cmake ninja gcc sfml ncurses pkgconf
+sudo pacman -S cmake ninja gcc sfml ncurses systemd pkgconf
 ```
 
 Configure and build:
