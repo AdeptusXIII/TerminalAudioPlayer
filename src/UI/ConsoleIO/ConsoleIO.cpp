@@ -47,6 +47,7 @@ void MConsoleIO::InitTUI()
     
     keypad(stdscr, TRUE);
     nodelay(stdscr, TRUE);
+    mousemask(ALL_MOUSE_EVENTS, nullptr);
 
     bTUIActive = true;
     
@@ -105,11 +106,13 @@ void MConsoleIO::RenderStatusWindow(const FUISnapshotData &UISnapshot, const FTr
         std::to_string(static_cast<int>(UISnapshot.Volume)).c_str(),
         std::to_string(static_cast<int>(gp::MAX_VOLUME)).c_str());
     
-    mvwprintw(StatusWindow, 4, 2, "[%s %s]", 
+    mvwprintw(StatusWindow, 4, 2, "[Active PlayList: %s", UISnapshot.ActiveTrackListName.c_str());
+    
+    mvwprintw(StatusWindow, 5, 2, "[%s %s]", 
         FormatTime(TrackInfo.DurationSec).c_str(),
         UISnapshot.CurrentTrackName.c_str());
     
-    mvwprintw(StatusWindow, 5, 2, "[%s %s %s]", 
+    mvwprintw(StatusWindow, 6, 2, "[%s %s %s]", 
         FormatTime(TrackInfo.PositionSec).c_str(), 
         ProgressBar.c_str(), 
         FormatTime(TrackInfo.RemainingSec).c_str());
@@ -142,7 +145,6 @@ void MConsoleIO::RenderInputWindow(const std::wstring &InputBuffer, std::size_t 
 FCommand MConsoleIO::ParseCommandLine(const std::string &Input)
 {
     FCommand Command;
-    bool CommandTypeValid = false;
 
     std::vector<std::string> Tokens;
     std::istringstream Stream(Input);
@@ -158,77 +160,96 @@ FCommand MConsoleIO::ParseCommandLine(const std::string &Input)
     if (Tokens[0] == ct::CommandTypeToString(ECommandType::Play)) 
     {
         Command.Type = ECommandType::Play;
-        CommandTypeValid = true;
     }
     if (Tokens[0] == ct::CommandTypeToString(ECommandType::Pause)) 
     {
         Command.Type = ECommandType::Pause;
-        CommandTypeValid = true;
     }
     if (Tokens[0] == ct::CommandTypeToString(ECommandType::Stop)) 
     {
         Command.Type = ECommandType::Stop;
-        CommandTypeValid = true;
     }
     if (Tokens[0] == ct::CommandTypeToString(ECommandType::Next)) 
     {
         Command.Type = ECommandType::Next;
-        CommandTypeValid = true;
     }
     if (Tokens[0] == ct::CommandTypeToString(ECommandType::Prev)) 
     {
         Command.Type = ECommandType::Prev;
-        CommandTypeValid = true;
     }
     if (Tokens[0] == ct::CommandTypeToString(ECommandType::List)) 
     {
         Command.Type = ECommandType::List;
-        CommandTypeValid = true;
     }
     if (Tokens[0] == ct::CommandTypeToString(ECommandType::Refresh)) 
     {
         Command.Type = ECommandType::Refresh;
-        CommandTypeValid = true;
     }
     if (Tokens[0] == ct::CommandTypeToString(ECommandType::Exit)) 
     {
         Command.Type = ECommandType::Exit;
-        CommandTypeValid = true;
     }
     if (Tokens[0] == ct::CommandTypeToString(ECommandType::Help)) 
     {
         Command.Type = ECommandType::Help;
         if (Tokens.size() >= 2) Command.Args.emplace_back(Tokens[1]);
-        CommandTypeValid = true;
     }
     if (Tokens[0] == ct::CommandTypeToString(ECommandType::Mode)) 
     {
         Command.Type = ECommandType::Mode;
         if (Tokens.size() >= 2) Command.Args.emplace_back(Tokens[1]);
-        CommandTypeValid = true;
     }
-    if (Tokens[0] == ct::CommandTypeToString(ECommandType::Select)) 
+    if (Tokens[0] == ct::CommandTypeToString(ECommandType::Select))
     {
         Command.Type = ECommandType::Select;
         if (Tokens.size() >= 2) Command.Args.emplace_back(Tokens[1]);
-        CommandTypeValid = true;
     }
     if (Tokens[0] == ct::CommandTypeToString(ECommandType::Volume)) 
     {
         Command.Type = ECommandType::Volume;
         if (Tokens.size() >= 2) Command.Args.emplace_back(Tokens[1]);
-        CommandTypeValid = true;
     }
     if (Tokens[0] == ct::CommandTypeToString(ECommandType::Status)) 
     {
         Command.Type = ECommandType::Status;
-        CommandTypeValid = true;
     }
     if (Tokens[0] == ct::CommandTypeToString(ECommandType::Find)) 
     {
         Command.Type = ECommandType::Find;
         if (Tokens.size() >= 2) Command.Args.emplace_back(Tokens[1]);
-        CommandTypeValid = true;
+    }
+    if (Tokens[0] == ct::CommandTypeToString(ECommandType::Scan)) 
+    {
+        Command.Type = ECommandType::Scan;
+        if (Tokens.size() < 2) 
+            return Command;
+        
+        bool bRecursiveScan = Tokens[1] == ct::CommandFlagToString(ECommandFlag::Recursive);
+        
+        std::size_t PathStartIndex = bRecursiveScan ? 2 : 1;
+        
+        if (PathStartIndex >= Tokens.size()) 
+            return Command;
+        
+        std::string PathArg = Tokens[PathStartIndex];
+        
+        for (std::size_t i = PathStartIndex + 1; i < Tokens.size(); i++)
+        {
+            PathArg += " " + Tokens[i];
+        }
+        
+        if (bRecursiveScan) 
+            Command.Args.emplace_back(ct::CommandFlagToString(ECommandFlag::Recursive));
+            
+        Command.Args.emplace_back(PathArg);
+    }
+    if (Tokens[0] == ct::CommandTypeToString(ECommandType::Playlist)) 
+    {
+        Command.Type = ECommandType::Playlist;
+        for (std::size_t i = 1; i < Tokens.size(); i++)
+        {
+            Command.Args.emplace_back(Tokens[i]);
+        }
     }
     
     Command.RawInput = Input;
@@ -257,6 +278,19 @@ FTUIInputEvent MConsoleIO::ReadInputEvent()
     {
         Event.bIsSpecialKey = true;
         Event.KeyCode = static_cast<int>(Input);
+        
+        if (Event.KeyCode == KEY_MOUSE)
+        {
+            MEVENT MouseEvent;
+            
+            if (getmouse(&MouseEvent) == OK)
+            {
+                Event.bIsMouseWheelUp = (MouseEvent.bstate & BUTTON4_PRESSED) != 0;
+#ifdef BUTTON5_PRESSED
+                Event.bIsMouseWheelDown = (MouseEvent.bstate & BUTTON5_PRESSED) != 0;
+#endif
+            }
+        }
     }
     else
     {
@@ -423,6 +457,50 @@ FCommand MConsoleIO::ReadCommand()
         Command.RawInput = Input;
         return Command;
     }
+    if (Tokens[0] == ct::CommandTypeToString(ECommandType::Scan)) 
+    {
+        Command.Type = ECommandType::Scan;
+        if (Tokens.size() < 2)
+        {
+            Command.RawInput = Input;
+            return Command;
+        }
+
+        const bool bRecursiveScan = Tokens[1] == ct::CommandFlagToString(ECommandFlag::Recursive);
+        const std::size_t PathStartIndex = bRecursiveScan ? 2 : 1;
+
+        if (PathStartIndex >= Tokens.size())
+        {
+            Command.RawInput = Input;
+            return Command;
+        }
+
+        std::string PathArg = Tokens[PathStartIndex];
+
+        for (std::size_t i = PathStartIndex + 1; i < Tokens.size(); i++)
+        {
+            PathArg += " " + Tokens[i];
+        }
+
+        if (bRecursiveScan)
+        {
+            Command.Args.emplace_back(ct::CommandFlagToString(ECommandFlag::Recursive));
+        }
+
+        Command.Args.emplace_back(PathArg);
+        Command.RawInput = Input;
+        return Command;
+    }
+    if (Tokens[0] == ct::CommandTypeToString(ECommandType::Playlist)) 
+    {
+        Command.Type = ECommandType::Playlist;
+        for (std::size_t i = 1; i < Tokens.size(); i++)
+        {
+            Command.Args.emplace_back(Tokens[i]);
+        }
+        Command.RawInput = Input;
+        return Command;
+    }
     
     
     return {};
@@ -431,11 +509,12 @@ FCommand MConsoleIO::ReadCommand()
 void MConsoleIO::PrintTrackList(const FUISnapshotData &UISnapshot)
 {
     std::vector<std::string> Lines;
-    Lines.emplace_back(std::string(stp::msg::APP_LIST_MSG) + stp::msg::fnc::APP_FNC_TOTAL_TRACKS_MSG + std::to_string(UISnapshot.TrackCount));
+    Lines.emplace_back(std::string(stp::msg::APP_LIST) + stp::msg::fnc::APP_FNC_TOTAL_TRACKS + std::to_string(UISnapshot.TrackCount));
+    Lines.emplace_back("Active list: " + UISnapshot.ActiveTrackListName);
 
     for (int i = 0; i < UISnapshot.TrackCount; i++)
     {
-        std::string CurrentTrack = (i == UISnapshot.TrackIndex) ? stp::msg::fnc::APP_FNC_CUR_TRACK_MSG : "";
+        std::string CurrentTrack = (i == UISnapshot.TrackIndex) ? stp::msg::fnc::APP_FNC_CUR_TRACK : "";
         std::string SubCatTorL = (i == UISnapshot.TrackCount - 1) ? stp::sep::SUBCAT_SEP_L : stp::sep::SUBCAT_SEP_T;
 
         Lines.emplace_back(stp::sep::SUBCAT_SEP_TAB + SubCatTorL
@@ -449,8 +528,8 @@ void MConsoleIO::PrintTrackList(const FUISnapshotData &UISnapshot)
 
 void MConsoleIO::PrintTotalTracksNum(const int &InTotalTracks) 
 {
-    PrintOutputMessage(std::string(stp::msg::APP_LIBRARY_MSG) + stp::msg::fnc::APP_FNC_LIB_RESET_MSG
-        + stp::msg::fnc::APP_FNC_TOTAL_TRACKS_MSG + std::to_string(InTotalTracks) + ".");
+    PrintOutputMessage(std::string(stp::msg::APP_LIBRARY) + stp::msg::fnc::APP_FNC_LIB_RESET
+        + stp::msg::fnc::APP_FNC_TOTAL_TRACKS + std::to_string(InTotalTracks) + ".");
 }
 
 void MConsoleIO::PrintCommandHelp()
@@ -464,6 +543,10 @@ void MConsoleIO::PrintCommandHelp()
         { ct::CommandTypeToString(ECommandType::Prev), "Play previous track" },
         { ct::CommandTypeToString(ECommandType::List), "Show track list" },
         { ct::CommandTypeToString(ECommandType::Refresh), "Rescan track library" },
+        { ct::CommandTypeToString(ECommandType::Scan) + " " + ct::RequiredArgDataTypeToString(ECommandType::Scan),
+            "Scan directory into buffer list" },
+        { ct::CommandTypeToString(ECommandType::Playlist) + " " + ct::RequiredArgDataTypeToString(ECommandType::Playlist),
+            "Manage track lists" },
         { ct::CommandTypeToString(ECommandType::Mode) + " " + ct::RequiredArgDataTypeToString(ECommandType::Mode),
             "Set playback mode" },
         { ct::CommandTypeToString(ECommandType::Select) + " " + ct::RequiredArgDataTypeToString(ECommandType::Select),
@@ -488,7 +571,7 @@ void MConsoleIO::PrintCommandHelp()
     }
     
     std::vector<std::string> Lines;
-    Lines.emplace_back(std::string(stp::msg::APP_HELP_MSG) + "Available commands:");
+    Lines.emplace_back(std::string(stp::msg::APP_HELP) + "Available commands:");
     
     for (const FHelpEntry& HelpEntry : HelpEntries)
     {
@@ -693,10 +776,61 @@ void MConsoleIO::PrintCommandHelpArg(ECommandType CommandType)
             HelpEntryEXT.Examples.emplace_back(ct::CommandTypeToString(ECommandType::Find) + " abb");
             break;
         }
+        case ECommandType::Scan:
+        {
+            HelpEntryEXT.Usage.emplace_back("scan <path>");
+            HelpEntryEXT.Usage.emplace_back("scan " + ct::CommandFlagToString(ECommandFlag::Recursive) + " <path>");
+            
+            HelpEntryEXT.Description.emplace_back("Scans a directory for supported audio files and stores the result in the buffer list.");
+            HelpEntryEXT.Description.emplace_back("scan <path> checks only files directly inside the target directory.");
+            HelpEntryEXT.Description.emplace_back("scan " + ct::CommandFlagToString(ECommandFlag::Recursive) + " <path> checks the target directory and all nested directories.");
+            HelpEntryEXT.Description.emplace_back("The buffer is temporary and is replaced by the next scan command.");
+            HelpEntryEXT.Description.emplace_back("After scanning, the active list is switched to buffer so list/play/select can inspect it.");
+            HelpEntryEXT.Description.emplace_back("Use pl all add <index|all> from buffer to save scanned tracks into the all list.");
+            HelpEntryEXT.Description.emplace_back("Paths starting with ~ are expanded to the current user's home directory.");
+            
+            HelpEntryEXT.Examples.emplace_back("scan ~/Music");
+            HelpEntryEXT.Examples.emplace_back("scan " + ct::CommandFlagToString(ECommandFlag::Recursive) + " ~/Music");
+            HelpEntryEXT.Examples.emplace_back("scan ~/Downloads/Music");
+            HelpEntryEXT.Examples.emplace_back("scan /mnt/storage/audio");
+            break;
+        }
+        case ECommandType::Playlist:
+        {
+            HelpEntryEXT.Usage.emplace_back("pl list");
+            HelpEntryEXT.Usage.emplace_back("pl current");
+            HelpEntryEXT.Usage.emplace_back("pl use <buffer|all|favorite|name|index>");
+            HelpEntryEXT.Usage.emplace_back("pl create <name>");
+            HelpEntryEXT.Usage.emplace_back("pl delete <name>");
+            HelpEntryEXT.Usage.emplace_back("pl <list> list");
+            HelpEntryEXT.Usage.emplace_back("pl all add <index|all> from buffer");
+            HelpEntryEXT.Usage.emplace_back("pl favorite add <index> from <buffer|all|name>");
+            HelpEntryEXT.Usage.emplace_back("pl favorite remove <index>");
+            HelpEntryEXT.Usage.emplace_back("pl <name> add <index|all> from <buffer|all|favorite|name>");
+            HelpEntryEXT.Usage.emplace_back("pl <name> remove <index>");
+            
+            HelpEntryEXT.Description.emplace_back("Manages track lists.");
+            HelpEntryEXT.Description.emplace_back("Built-in lists are: 0 buffer, 1 all, 2 favorite.");
+            HelpEntryEXT.Description.emplace_back("Custom playlists start at index 3.");
+            HelpEntryEXT.Description.emplace_back("buffer is temporary scan output.");
+            HelpEntryEXT.Description.emplace_back("all is the persistent list of tracks known by the player.");
+            HelpEntryEXT.Description.emplace_back("favorite contains favorite tracks and every favorite track is also added to all.");
+            HelpEntryEXT.Description.emplace_back("pl use changes the active list used by list/play/select/next/prev.");
+            HelpEntryEXT.Description.emplace_back("Only all is currently saved to library.txt. Custom and favorite lists are runtime-only for now.");
+            
+            HelpEntryEXT.Examples.emplace_back("pl list");
+            HelpEntryEXT.Examples.emplace_back("pl use buffer");
+            HelpEntryEXT.Examples.emplace_back("pl all add all from buffer");
+            HelpEntryEXT.Examples.emplace_back("pl favorite add 3 from buffer");
+            HelpEntryEXT.Examples.emplace_back("pl create raskol");
+            HelpEntryEXT.Examples.emplace_back("pl raskol add 5 from all");
+            HelpEntryEXT.Examples.emplace_back("pl use raskol");
+            break;
+        }
     }
     
     std::vector<std::string> Lines;
-    Lines.emplace_back(stp::msg::APP_HELP_MSG + ct::CommandTypeToString(CommandType));
+    Lines.emplace_back(stp::msg::APP_HELP + ct::CommandTypeToString(CommandType));
     Lines.emplace_back(" Usage:");
     for (const auto &Usage : HelpEntryEXT.Usage)
     {
@@ -795,7 +929,7 @@ void MConsoleIO::PrintStatus(const FUISnapshotData &UISnapshot, const FTrackInfo
     float RemainingSec = TrackInfo.RemainingSec;
     
     std::vector<std::string> Lines;
-    Lines.emplace_back(stp::msg::APP_STATUS_MSG);
+    Lines.emplace_back(stp::msg::APP_STATUS);
     Lines.emplace_back("  [State: " + State + "]");
     Lines.emplace_back("  [Playback Mode: " + Mode + "]");
     Lines.emplace_back("  [Current Track: " + UISnapshot.CurrentTrackName + "]");
@@ -810,12 +944,12 @@ void MConsoleIO::PrintFindResults(const std::vector<std::pair<int, std::string>>
 {
     if (FoundTracks.empty())
     {
-        PrintOutputMessage(std::string(stp::msg::APP_FIND_MSG) + "No matches found.");
+        PrintOutputMessage(std::string(stp::msg::APP_FIND) + "No matches found.");
         return;
     }
 
     std::vector<std::string> Lines;
-    Lines.emplace_back(std::string(stp::msg::APP_FIND_MSG) + "Results: " + std::to_string(FoundTracks.size()));
+    Lines.emplace_back(std::string(stp::msg::APP_FIND) + "Results: " + std::to_string(FoundTracks.size()));
 
     for (size_t i = 0; i < FoundTracks.size(); i++)
     {

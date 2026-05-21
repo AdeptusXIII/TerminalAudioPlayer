@@ -13,6 +13,28 @@
 #include <algorithm>
 #include <cwctype>
 
+namespace
+{
+    std::string ScanResultStatusToMessage(EScanResultStatus Status)
+    {
+        switch (Status)
+        {
+            case EScanResultStatus::EmptyPath:
+                return stp::msg::fnc::APP_FNC_PATH_EMPTY;
+            case EScanResultStatus::PathDoesNotExist:
+                return stp::msg::fnc::APP_FNC_PATH_NOT_EXISTS;
+            case EScanResultStatus::PathIsNotDirectory:
+                return stp::msg::fnc::APP_FNC_PATH_NOT_DIR;
+            case EScanResultStatus::UnexpectedError:
+                return stp::msg::fnc::APP_FNC_ERR_UNEXP;
+            case EScanResultStatus::Success:
+                return {};
+        }
+
+        return stp::msg::fnc::APP_FNC_ERR_UNEXP;
+    }
+}
+
 MEngine::MEngine()
     
 {
@@ -20,20 +42,35 @@ MEngine::MEngine()
     PlaybackMode = EPlaybackMode::LoopAll;
     bWantExit = false;
     CurrentVolume = 100;
-    DefaultContentDir = std::getenv("HOME") + std::string("/Music/TAP_content");
+    
+    const char* HomeEnv = std::getenv("HOME");
+    if (HomeEnv != nullptr)
+    {
+        DefaultContentDir = std::filesystem::path(HomeEnv) / "Music/TAP_content";
+    }
+    else
+    {
+        DefaultContentDir = std::filesystem::current_path() / "TAP_content";
+    }
+
     bAudioSyncThreadRunning = false;
 }
 
 void MEngine::Init()
 {
-    std::string VersionNumber = "0.17";
-    std::cout << stp::msg::ENGINE_INIT_MSG << VersionNumber << std::endl;
+    std::string VersionNumber = "0.18";
+    std::cout << stp::msg::ENGINE_INIT << VersionNumber << std::endl;
     
-    FileManager.Init();   
-    AudioBackend.Init();
+    TrackLibraryStorage.EnsureStorageFileExists();
+    TrackLibrary.SetAllTracks(TrackLibraryStorage.LoadTrackPaths());
     
     CreateDefaultContentDir();
-    WriteTrackListToTrackLibrary(DefaultContentDir);
+    
+    if (TrackLibrary.GetTrackListSize() == 0)
+    {
+        WriteTrackListToTrackLibrary(DefaultContentDir);
+        SaveAllTrackList();
+    }
 }
 
 void MEngine::SyncAudioState() 
@@ -114,7 +151,7 @@ void MEngine::RunTUILoop()
                 continue;
             }
             
-            if (HandleTUIControlKey(InputEvent.KeyCode, InputBuffer, InputCursorIndex))
+            if (HandleTUIControlKey(InputEvent, InputBuffer, InputCursorIndex))
             {
                 RenderTUIFrame(InputBuffer, InputCursorIndex);
             }
@@ -145,8 +182,10 @@ void MEngine::RenderTUIFrame(const std::wstring &InputBuffer, std::size_t InputC
     ConsoleIO.RenderInputWindow(InputBuffer, InputCursorIndex);
 }
 
-bool MEngine::HandleTUIControlKey(int KeyCode, std::wstring& InputBuffer, std::size_t& InputCursorIndex)
+bool MEngine::HandleTUIControlKey(const FTUIInputEvent& InputEvent, std::wstring& InputBuffer, std::size_t& InputCursorIndex)
 {
+    const int KeyCode = InputEvent.KeyCode;
+    
     if (KeyCode == KEY_RESIZE)
     {
         ConsoleIO.ResizeTUI();
@@ -205,6 +244,23 @@ bool MEngine::HandleTUIControlKey(int KeyCode, std::wstring& InputBuffer, std::s
         ConsoleIO.ScrollOutputWindowVertical(1);
         return true;
     }
+    
+    if (KeyCode == KEY_MOUSE)
+    {
+        if (InputEvent.bIsMouseWheelUp)
+        {
+            ConsoleIO.ScrollOutputWindowVertical(-1);
+            return true;
+        }
+        
+        if (InputEvent.bIsMouseWheelDown)
+        {
+            ConsoleIO.ScrollOutputWindowVertical(1);
+            return true;
+        }
+        
+        return true;
+    }
 
     return false;
 }
@@ -246,7 +302,7 @@ void MEngine::ExecuteCommandPrompt(const FCommand &InCommandPrompt)
         {
             if (!TryPlay())
             {
-                ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_WARNING_MSG) + stp::msg::fnc::APP_FNC_TRY_PLAY_MSG);
+                ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_WARNING) + stp::msg::fnc::APP_FNC_TRY_PLAY);
             }
             break;
         }
@@ -254,7 +310,7 @@ void MEngine::ExecuteCommandPrompt(const FCommand &InCommandPrompt)
         {
             if (!TryPause())
             {
-                ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_WARNING_MSG) + stp::msg::fnc::APP_FNC_TRY_PAUSE_MSG);
+                ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_WARNING) + stp::msg::fnc::APP_FNC_TRY_PAUSE);
             }
             break;
         }
@@ -262,7 +318,7 @@ void MEngine::ExecuteCommandPrompt(const FCommand &InCommandPrompt)
         {
             if (!TryStop())
             {
-                ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_WARNING_MSG) + stp::msg::fnc::APP_FNC_TRY_STOP_MSG);
+                ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_WARNING) + stp::msg::fnc::APP_FNC_TRY_STOP);
             }
             break;
         }
@@ -272,7 +328,7 @@ void MEngine::ExecuteCommandPrompt(const FCommand &InCommandPrompt)
             {
                 if (!TryPlayNextTrackOrFirst())
                 {
-                    ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_WARNING_MSG) + stp::msg::fnc::APP_FNC_TRY_NEXT_MSG);
+                    ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_WARNING) + stp::msg::fnc::APP_FNC_TRY_NEXT);
                 }
             }
             break;
@@ -283,7 +339,7 @@ void MEngine::ExecuteCommandPrompt(const FCommand &InCommandPrompt)
             {
                 if (!TryPlayPrevTrackOrLast())
                 {
-                    ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_WARNING_MSG) + stp::msg::fnc::APP_FNC_TRY_PREV_MSG);
+                    ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_WARNING) + stp::msg::fnc::APP_FNC_TRY_PREV);
                 }
             }
             break;
@@ -296,6 +352,7 @@ void MEngine::ExecuteCommandPrompt(const FCommand &InCommandPrompt)
         case ECommandType::Refresh:
         {
             RefreshTrackLibrary(DefaultContentDir);
+            SaveAllTrackList();
             int TrackCount = 0;
             {
                 std::lock_guard<std::mutex> Lock(EngineMutex);
@@ -308,11 +365,11 @@ void MEngine::ExecuteCommandPrompt(const FCommand &InCommandPrompt)
         {
             if (TryExit()) 
             {
-                ConsoleIO.PrintOutputMessage(stp::msg::APP_SHUTDOWN_MSG);
+                ConsoleIO.PrintOutputMessage(stp::msg::APP_SHUTDOWN);
             }
             else 
             {
-                ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR_MSG) + stp::msg::fnc::APP_FNC_ERR_UNEXP_MSG);
+                ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR) + stp::msg::fnc::APP_FNC_ERR_UNEXP);
                 bWantExit = true;
             }
             break;
@@ -331,7 +388,7 @@ void MEngine::ExecuteCommandPrompt(const FCommand &InCommandPrompt)
         {
             if (InCommandPrompt.Args.empty())
             {
-                ConsoleIO.PrintOutputMessage(stp::msg::fnc::APP_FNC_LOW_ARG_MSG);
+                ConsoleIO.PrintOutputMessage(stp::msg::fnc::APP_FNC_LOW_ARG);
                 return;
             }
             HandleModeCommand(InCommandPrompt.Args[0]);
@@ -341,7 +398,7 @@ void MEngine::ExecuteCommandPrompt(const FCommand &InCommandPrompt)
         {
             if (InCommandPrompt.Args.empty())
             {
-                ConsoleIO.PrintOutputMessage(stp::msg::fnc::APP_FNC_LOW_ARG_MSG);
+                ConsoleIO.PrintOutputMessage(stp::msg::fnc::APP_FNC_LOW_ARG);
                 return;
             }
             HandleSelectCommand(InCommandPrompt.Args[0]);
@@ -358,7 +415,7 @@ void MEngine::ExecuteCommandPrompt(const FCommand &InCommandPrompt)
             }
             else
             {
-                ConsoleIO.PrintOutputMessage(stp::msg::fnc::APP_FNC_LOW_ARG_MSG);
+                ConsoleIO.PrintOutputMessage(stp::msg::fnc::APP_FNC_LOW_ARG);
             }
             break;
         }
@@ -375,13 +432,29 @@ void MEngine::ExecuteCommandPrompt(const FCommand &InCommandPrompt)
             }
             else
             {
-                ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR_MSG) + stp::msg::fnc::APP_FNC_LOW_ARG_MSG);
+                ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR) + stp::msg::fnc::APP_FNC_LOW_ARG);
                 break;
             }
             break;
         }
+        case ECommandType::Scan:
+        {
+            if (InCommandPrompt.Args.empty())
+            {
+                ConsoleIO.PrintOutputMessage(stp::msg::fnc::APP_FNC_LOW_ARG);
+                return;
+            }
+            
+            HandleScanCommand(InCommandPrompt.Args);
+            break;
+        }
+        case ECommandType::Playlist:
+        {
+            HandlePlaylistCommand(InCommandPrompt.Args);
+            break;
+        }
         case ECommandType::Unknown:
-            ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR_MSG) + stp::msg::fnc::APP_FNC_UNKNOWN_CMD_MSG);
+            ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR) + stp::msg::fnc::APP_FNC_UNKNOWN_CMD);
             break;
     }
 }
@@ -414,10 +487,286 @@ void MEngine::HandleModeCommand(const std::string &Arg)
         }
         else
         {
-            ConsoleIO.PrintOutputMessage(stp::msg::APP_ERROR_MSG);
-            ConsoleIO.PrintOutputMessage(stp::msg::fnc::APP_FNC_INVALID_ARG_MSG);
+            ConsoleIO.PrintOutputMessage(stp::msg::APP_ERROR);
+            ConsoleIO.PrintOutputMessage(stp::msg::fnc::APP_FNC_INVALID_ARG);
         }
     }
+}
+
+void MEngine::HandleScanCommand(const std::vector<std::string> &Args)
+{
+    if (Args.empty())
+    {
+        ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_LIST) + stp::msg::fnc::APP_FNC_LOW_ARG);
+        return;
+    }
+
+    bool bRecursiveScan = false;
+    std::string Path = {};
+    if (Args[0] == ct::CommandFlagToString(ECommandFlag::Recursive))
+    {
+        if (Args.size() < 2)
+        {
+            ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_LIST) + stp::msg::fnc::APP_FNC_LOW_ARG);
+            return;
+        }
+
+        bRecursiveScan = true;
+        Path = Args[1];
+    }
+    else
+    {
+        Path = Args[0];
+    }
+    
+    const std::filesystem::path ScanPath = ExpandUserPath(Path);
+    FScanResult ScanResult;
+    
+    if (bRecursiveScan)
+    {
+        ScanResult = AudioFileScanner.ScanPathRecursive(ScanPath);
+    }
+    else
+    {
+        ScanResult = AudioFileScanner.ScanPath(ScanPath);
+    }
+    
+    if (ScanResult.Status != EScanResultStatus::Success)
+    {
+        ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_LIST)
+            + ScanResultStatusToMessage(ScanResult.Status));
+        return;
+    }
+    
+    {
+        std::lock_guard<std::mutex> Lock(EngineMutex);
+        TrackLibrary.SetBufferTracks(ScanResult.Tracks);
+        TrackLibrary.SetActiveTrackListByName("buffer");
+    }
+    
+    ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_LIST) + "Scanned path: " + ScanPath.string());
+    ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_LIST) + "Found " + std::to_string(ScanResult.Tracks.size())
+        + " tracks. Active list switched to buffer.");
+}
+
+void MEngine::HandlePlaylistCommand(const std::vector<std::string> &Args)
+{
+    if (Args.empty())
+    {
+        PrintTrackListSummaries();
+        return;
+    }
+    
+    const std::string& Target = Args[0];
+    
+    if (Target == "list")
+    {
+        PrintTrackListSummaries();
+        return;
+    }
+    
+    if (Target == "current")
+    {
+        std::lock_guard<std::mutex> Lock(EngineMutex);
+        ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_LIST) + "Active list: " + TrackLibrary.GetActiveTrackListName());
+        return;
+    }
+    
+    if (Target == "use")
+    {
+        if (Args.size() < 2)
+        {
+            ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_LIST) + "Usage: pl use <buffer|all|favorite|custom>");
+            return;
+        }
+        
+        std::lock_guard<std::mutex> Lock(EngineMutex);
+        
+        const bool bChanged = CommandArgIsInt(Args[1])
+            ? TrackLibrary.SetActiveTrackListByIndex(std::stoi(Args[1]))
+            : TrackLibrary.SetActiveTrackListByName(Args[1]);
+        
+        ConsoleIO.PrintOutputMessage(bChanged
+            ? std::string(stp::msg::APP_LIST) + "Active list: " + TrackLibrary.GetActiveTrackListName()
+            : std::string(stp::msg::APP_LIST) + "Unknown list.");
+        return;
+    }
+    
+    if (Target == "create")
+    {
+        if (Args.size() < 2)
+        {
+            ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_LIST) + "Usage: pl create <name>");
+            return;
+        }
+        
+        std::lock_guard<std::mutex> Lock(EngineMutex);
+        ConsoleIO.PrintOutputMessage(TrackLibrary.CreateCustomTrackList(Args[1])
+            ? std::string(stp::msg::APP_LIST) + "Created playlist: " + Args[1]
+            : std::string(stp::msg::APP_LIST) + "Failed to create playlist.");
+        return;
+    }
+    
+    if (Target == "delete")
+    {
+        if (Args.size() < 2)
+        {
+            ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_LIST) + "Usage: pl delete <name>");
+            return;
+        }
+        
+        std::lock_guard<std::mutex> Lock(EngineMutex);
+        ConsoleIO.PrintOutputMessage(TrackLibrary.DeleteCustomTrackList(Args[1])
+            ? std::string(stp::msg::APP_LIST) + "Deleted playlist: " + Args[1]
+            : std::string(stp::msg::APP_LIST) + "Failed to delete playlist.");
+        return;
+    }
+    
+    if (Target == "all" && Args.size() >= 4 && Args[1] == "add" && Args[3] == "from")
+    {
+        if (Args.size() < 5 || Args[4] != "buffer")
+        {
+            ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_LIST) + "Usage: pl all add <index|all> from buffer");
+            return;
+        }
+        
+        std::lock_guard<std::mutex> Lock(EngineMutex);
+        
+        const bool bAddAll = Args[2] == "all";
+        const int Index = bAddAll ? -1 : (CommandArgIsInt(Args[2]) ? std::stoi(Args[2]) : -1);
+        const bool bChanged = TrackLibrary.ImportFromBuffer(bAddAll, Index);
+        
+        if (bChanged)
+        {
+            SaveAllTrackList();
+        }
+        
+        ConsoleIO.PrintOutputMessage(bChanged
+            ? std::string(stp::msg::APP_LIST) + "Imported to all."
+            : std::string(stp::msg::APP_LIST) + "Nothing imported.");
+        return;
+    }
+    
+    if ((Target == "favorite" || Target == "fav") && Args.size() >= 5 && Args[1] == "add" && Args[3] == "from")
+    {
+        const int Index = CommandArgIsInt(Args[2]) ? std::stoi(Args[2]) : -1;
+        
+        std::lock_guard<std::mutex> Lock(EngineMutex);
+        const bool bChanged = TrackLibrary.AddToFavoritesFromList(Args[4], Index);
+        
+        if (bChanged)
+        {
+            SaveAllTrackList();
+        }
+        
+        ConsoleIO.PrintOutputMessage(bChanged
+            ? std::string(stp::msg::APP_LIST) + "Added to favorite."
+            : std::string(stp::msg::APP_LIST) + "Failed to add favorite.");
+        return;
+    }
+    
+    if ((Target == "favorite" || Target == "fav") && Args.size() >= 3 && Args[1] == "remove")
+    {
+        const int Index = CommandArgIsInt(Args[2]) ? std::stoi(Args[2]) : -1;
+        
+        std::lock_guard<std::mutex> Lock(EngineMutex);
+        ConsoleIO.PrintOutputMessage(TrackLibrary.RemoveFromTrackList("favorite", Index)
+            ? std::string(stp::msg::APP_LIST) + "Removed from favorite."
+            : std::string(stp::msg::APP_LIST) + "Failed to remove from favorite.");
+        return;
+    }
+    
+    if (Args.size() == 2 && Args[1] == "list")
+    {
+        {
+            std::lock_guard<std::mutex> Lock(EngineMutex);
+            if (!TrackLibrary.SetActiveTrackListByName(Target))
+            {
+                ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_LIST) + "Unknown list.");
+                return;
+            }
+        }
+        
+        ConsoleIO.PrintTrackList(BuildUISnapshotData());
+        return;
+    }
+    
+    if (Args.size() >= 5 && Args[1] == "add" && Args[3] == "from")
+    {
+        const bool bAddAll = Args[2] == "all";
+        const int Index = bAddAll ? -1 : (CommandArgIsInt(Args[2]) ? std::stoi(Args[2]) : -1);
+        
+        std::lock_guard<std::mutex> Lock(EngineMutex);
+        const bool bChanged = TrackLibrary.AddToTrackListFromList(Target, Args[4], bAddAll, Index);
+        
+        if (bChanged)
+        {
+            SaveAllTrackList();
+        }
+        
+        ConsoleIO.PrintOutputMessage(bChanged
+            ? std::string(stp::msg::APP_LIST) + "Track added."
+            : std::string(stp::msg::APP_LIST) + "Failed to add track.");
+        return;
+    }
+    
+    if (Args.size() >= 3 && Args[1] == "remove")
+    {
+        const int Index = CommandArgIsInt(Args[2]) ? std::stoi(Args[2]) : -1;
+        
+        std::lock_guard<std::mutex> Lock(EngineMutex);
+        ConsoleIO.PrintOutputMessage(TrackLibrary.RemoveFromTrackList(Target, Index)
+            ? std::string(stp::msg::APP_LIST) + "Track removed."
+            : std::string(stp::msg::APP_LIST) + "Failed to remove track.");
+        return;
+    }
+    
+    ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_LIST) + "Unknown playlist command.");
+}
+
+bool MEngine::SaveAllTrackList()
+{
+    return TrackLibraryStorage.SaveTrackPaths(TrackLibrary.GetAllTrackPaths());
+}
+
+void MEngine::PrintTrackListSummaries()
+{
+    std::vector<std::string> Lines;
+    Lines.emplace_back(std::string(stp::msg::APP_LIST) + "Track lists:");
+    
+    {
+        std::lock_guard<std::mutex> Lock(EngineMutex);
+        
+        for (const std::string& Summary : TrackLibrary.GetTrackListSummaries())
+        {
+            Lines.emplace_back("  " + Summary);
+        }
+        
+        Lines.emplace_back("Active: " + TrackLibrary.GetActiveTrackListName());
+    }
+    
+    ConsoleIO.PrintOutputLines(Lines);
+}
+
+std::filesystem::path MEngine::ExpandUserPath(const std::string &Path) const
+{
+    if (Path == "~")
+    {
+        const char* HomeEnv = std::getenv("HOME");
+        return HomeEnv != nullptr ? std::filesystem::path(HomeEnv) : std::filesystem::path(Path);
+    }
+    
+    if (Path.size() > 2 && Path[0] == '~' && Path[1] == '/')
+    {
+        const char* HomeEnv = std::getenv("HOME");
+        
+        if (HomeEnv != nullptr)
+        {
+            return std::filesystem::path(HomeEnv) / Path.substr(2);
+        }
+    }
+    
+    return std::filesystem::path(Path);
 }
 
 void MEngine::HandleHelpCommand(const std::string &Arg)
@@ -480,13 +829,21 @@ void MEngine::HandleHelpCommand(const std::string &Arg)
     {
         ConsoleIO.PrintCommandHelpArg(ECommandType::Find);
     }
+    else if (Arg == ct::CommandTypeToString(ECommandType::Scan))
+    {
+        ConsoleIO.PrintCommandHelpArg(ECommandType::Scan);
+    }
+    else if (Arg == ct::CommandTypeToString(ECommandType::Playlist))
+    {
+        ConsoleIO.PrintCommandHelpArg(ECommandType::Playlist);
+    }
     else if (Arg == ct::CommandTypeToString(ECommandType::Unknown))
     {
         return;
     }
     else
     {
-        ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_HELP_MSG) + stp::msg::fnc::APP_FNC_UNKNOWN_HELP_MSG);
+        ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_HELP) + stp::msg::fnc::APP_FNC_UNKNOWN_HELP);
     }
 }
 
@@ -494,7 +851,7 @@ void MEngine::HandleSelectCommand(const std::string &ArgIndex)
 {
     if (!CommandArgIsInt(ArgIndex))
     {
-         ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR_MSG) + stp::msg::fnc::APP_FNC_INVALID_ARG_MSG);
+         ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR) + stp::msg::fnc::APP_FNC_INVALID_ARG);
         return;
     }
     
@@ -506,7 +863,7 @@ void MEngine::HandleSelectCommand(const std::string &ArgIndex)
             
         if (!bIndexInRange)
         {
-            ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR_MSG) + stp::msg::fnc::APP_FNC_INVALID_INDEX_MSG);
+            ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR) + stp::msg::fnc::APP_FNC_INVALID_INDEX);
             return;
         }
             
@@ -515,7 +872,7 @@ void MEngine::HandleSelectCommand(const std::string &ArgIndex)
             std::filesystem::path Path = TrackLibrary.GetTrackPathByIndex(TrackIndex);
             if (Path.empty())
             {
-                ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR_MSG) + stp::msg::fnc::APP_FNC_PATH_EMPTY_MSG);
+                ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR) + stp::msg::fnc::APP_FNC_PATH_EMPTY);
                 return;
             }
 
@@ -524,13 +881,13 @@ void MEngine::HandleSelectCommand(const std::string &ArgIndex)
                 SetAudioPlayerState(EAudioPlayerState::Playing);
                 if (!TrackLibrary.SetCurrentIndex(TrackIndex))
                 {
-                    ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR_MSG) + stp::msg::fnc::APP_FNC_FAIL_SET_INDEX_MSG);
+                    ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR) + stp::msg::fnc::APP_FNC_FAIL_SET_INDEX);
                     return;
                 }
                 return;
             }
 
-            ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR_MSG) + stp::msg::fnc::APP_FNC_ERR_TRY_PLAY_FILE_MSG + Path.string());
+            ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR) + stp::msg::fnc::APP_FNC_ERR_TRY_PLAY_FILE + Path.string());
         }
         else 
         {
@@ -539,7 +896,7 @@ void MEngine::HandleSelectCommand(const std::string &ArgIndex)
         
             if (!TrackLibrary.SetCurrentIndex(TrackIndex)) 
             {
-                ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR_MSG) + stp::msg::fnc::APP_FNC_FAIL_SET_INDEX_MSG);
+                ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR) + stp::msg::fnc::APP_FNC_FAIL_SET_INDEX);
             }
         }
     }
@@ -556,19 +913,19 @@ bool MEngine::HandleVolumeCommand(const std::string& Arg)
         
         if (Pos != Arg.size())
         {
-            ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR_MSG) + stp::msg::fnc::APP_FNC_INVALID_ARG_MSG);
+            ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR) + stp::msg::fnc::APP_FNC_INVALID_ARG);
             return false;
         }
 
         if (!std::isfinite(Volume))
         {
-            ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR_MSG) + stp::msg::fnc::APP_FNC_INVALID_ARG_MSG);
+            ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR) + stp::msg::fnc::APP_FNC_INVALID_ARG);
             return false;
         }
 
         if (Volume < gp::MIN_VOLUME || Volume > gp::MAX_VOLUME)
         {
-            ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR_MSG) + stp::msg::fnc::APP_FNC_INVALID_ARG_MSG);
+            ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR) + stp::msg::fnc::APP_FNC_INVALID_ARG);
             return false;
         }
 
@@ -577,7 +934,7 @@ bool MEngine::HandleVolumeCommand(const std::string& Arg)
     }
     catch (...)
     {
-        ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR_MSG) + stp::msg::fnc::APP_FNC_INVALID_ARG_MSG);
+        ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR) + stp::msg::fnc::APP_FNC_INVALID_ARG);
     }
     
     return false;
@@ -608,7 +965,7 @@ bool MEngine::CreateDefaultContentDir()
 {
     bool bCreated = false;
     
-    if (FileManager.CreateDir(DefaultContentDir))
+    if (TrackLibraryStorage.EnsureDirectoryExists(DefaultContentDir))
     {
         bCreated = true;
         if (gp::bPrintDebugInfo) 
@@ -622,12 +979,14 @@ bool MEngine::CreateDefaultContentDir()
 
 void MEngine::WriteTrackListToTrackLibrary(const std::filesystem::path &InPath) 
 {
-    TrackLibrary.AddTracksToTrackList(AudioFileScanner.ScanPath(InPath));
+    const FScanResult ScanResult = AudioFileScanner.ScanPath(InPath);
+    TrackLibrary.SetAllTracks(ScanResult.Tracks);
+    TrackLibrary.SetActiveTrackListByName("all");
 }
 
 void MEngine::RefreshTrackLibrary(const std::filesystem::path &InPath)
 {
-    std::vector<std::filesystem::path> ScannedPath = AudioFileScanner.ScanPath(InPath);
+    const FScanResult ScanResult = AudioFileScanner.ScanPath(InPath);
     
     std::lock_guard<std::mutex> Lock(EngineMutex);
     
@@ -637,8 +996,8 @@ void MEngine::RefreshTrackLibrary(const std::filesystem::path &InPath)
         SetAudioPlayerState(EAudioPlayerState::Idle);
     }
     
-    TrackLibrary.Clear();
-    TrackLibrary.AddTracksToTrackList(ScannedPath);
+    TrackLibrary.SetAllTracks(ScanResult.Tracks);
+    TrackLibrary.SetActiveTrackListByName("all");
 }
 
 void MEngine::ApplyCurrentVolume()
@@ -837,7 +1196,7 @@ bool MEngine::TryPlayNextTrackOrFirst()
             return true;
         }
         
-        ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR_MSG) + stp::msg::fnc::APP_FNC_FAIL_PLAY_FIRST_MSG);
+        ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR) + stp::msg::fnc::APP_FNC_FAIL_PLAY_FIRST);
         return false;
     }
     
@@ -848,7 +1207,7 @@ bool MEngine::TryPlayNextTrackOrFirst()
         return true;
     }
     
-    ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR_MSG) + stp::msg::fnc::APP_FNC_ERR_TRY_PLAY_FILE_MSG + TrackLibrary.GetCurrentTrackName());
+    ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR) + stp::msg::fnc::APP_FNC_ERR_TRY_PLAY_FILE + TrackLibrary.GetCurrentTrackName());
     return false;
 }
 
@@ -867,7 +1226,7 @@ bool MEngine::TryPlayPrevTrackOrLast()
             return true;
         }
         
-        ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR_MSG) + stp::msg::fnc::APP_FNC_FAIL_PLAY_LAST_MSG);
+        ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR) + stp::msg::fnc::APP_FNC_FAIL_PLAY_LAST);
         return false;
     }
     
@@ -878,7 +1237,7 @@ bool MEngine::TryPlayPrevTrackOrLast()
         return true;
     }
     
-    ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR_MSG) + stp::msg::fnc::APP_FNC_ERR_TRY_PLAY_FILE_MSG + TrackLibrary.GetCurrentTrackName());
+    ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR) + stp::msg::fnc::APP_FNC_ERR_TRY_PLAY_FILE + TrackLibrary.GetCurrentTrackName());
     return false;
 }
 
@@ -888,7 +1247,7 @@ bool MEngine::TryPlayRandomTrack()
     
     if (TrackLibrary.IsEmpty()) 
     {
-        ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR_MSG) + stp::msg::fnc::APP_FNC_ERR_LIBRARY_EMPTY_MSG);
+        ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR) + stp::msg::fnc::APP_FNC_ERR_LIBRARY_EMPTY);
         return false;
     }
     
@@ -905,7 +1264,7 @@ bool MEngine::TryPlayRandomTrack()
             return true;
         }
         
-        ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR_MSG) + stp::msg::fnc::APP_FNC_FAIL_PLAY_MSG);
+        ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR) + stp::msg::fnc::APP_FNC_FAIL_PLAY);
         return false;
     }
     
@@ -925,7 +1284,7 @@ bool MEngine::TryPlayRandomTrack()
         return true;
     }
     
-    ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR_MSG) + stp::msg::fnc::APP_FNC_ERR_TRY_PLAY_FILE_MSG + TrackLibrary.GetCurrentTrackName());
+    ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR) + stp::msg::fnc::APP_FNC_ERR_TRY_PLAY_FILE + TrackLibrary.GetCurrentTrackName());
     return false;
 }
 
@@ -965,6 +1324,7 @@ FUISnapshotData MEngine::BuildUISnapshotData()
         SnapshotData.TrackCount = TrackLibrary.GetTrackListSize();
         SnapshotData.Volume = CurrentVolume;
         SnapshotData.TrackIndex = TrackLibrary.GetCurrentIndex();
+        SnapshotData.ActiveTrackListName = TrackLibrary.GetActiveTrackListName();
         SnapshotData.CurrentTrackName = TrackLibrary.GetCurrentTrackName();
         
         std::vector<std::string> TrackNames;

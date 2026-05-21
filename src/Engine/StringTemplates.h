@@ -26,40 +26,42 @@ namespace stp
     /** MESSAGE */
     namespace msg
     {
-        constexpr const char* ENGINE_INIT_MSG = "TAP - Terminal Audio Player V.";
-        constexpr const char* APP_WARNING_MSG = "[TAP::WARNING] ";
-        constexpr const char* APP_ERROR_MSG = "[TAP::ERROR] ";
-        constexpr const char* APP_LIBRARY_MSG = "[TAP::LIBRARY] ";
-        constexpr const char* APP_HELP_MSG = "[TAP::HELP] ";
-        constexpr const char* APP_STATUS_MSG = "[TAP::STATUS] ";
-        constexpr const char* APP_LIST_MSG = "[TAP::LIST] ";
-        constexpr const char* APP_FIND_MSG = "[TAP::FIND] ";
-        constexpr const char* APP_SHUTDOWN_MSG = "[TAP::SHUTDOWN] Shutting down...";
+        constexpr const char* ENGINE_INIT = "TAP - Terminal Audio Player V.";
+        constexpr const char* APP_WARNING = "[TAP::WARNING] ";
+        constexpr const char* APP_ERROR = "[TAP::ERROR] ";
+        constexpr const char* APP_LIBRARY = "[TAP::LIBRARY] ";
+        constexpr const char* APP_HELP = "[TAP::HELP] ";
+        constexpr const char* APP_STATUS = "[TAP::STATUS] ";
+        constexpr const char* APP_LIST = "[TAP::LIST] ";
+        constexpr const char* APP_FIND = "[TAP::FIND] ";
+        constexpr const char* APP_SHUTDOWN = "[TAP::SHUTDOWN] Shutting down...";
     
         /** FUNCTION MESSAGE */
         namespace fnc
         {
-            constexpr const char* APP_FNC_LOW_ARG_MSG = "...Too low arguments...";
-            constexpr const char* APP_FNC_INVALID_ARG_MSG = "Invalid argument.";
-            constexpr const char* APP_FNC_INVALID_INDEX_MSG = "Invalid index.";
-            constexpr const char* APP_FNC_UNKNOWN_CMD_MSG = "Unknown command.";
-            constexpr const char* APP_FNC_UNKNOWN_HELP_MSG = "Unknown help topic.";
-            constexpr const char* APP_FNC_TOTAL_TRACKS_MSG = "Total tracks found: ";
-            constexpr const char* APP_FNC_LIB_RESET_MSG = "Library refreshed.";
-            constexpr const char* APP_FNC_CUR_TRACK_MSG = " <- current/selected";
-            constexpr const char* APP_FNC_ERR_UNEXP_MSG = "Unexpected Error. Force exit.";
-            constexpr const char* APP_FNC_ERR_TRY_PLAY_FILE_MSG = "Error while trying to play: ";
-            constexpr const char* APP_FNC_ERR_LIBRARY_EMPTY_MSG = "Track library is empty.";
-            constexpr const char* APP_FNC_PATH_EMPTY_MSG = "Track path is empty.";
-            constexpr const char* APP_FNC_FAIL_SET_INDEX_MSG = "Failed to set current track index.";
-            constexpr const char* APP_FNC_FAIL_PLAY_MSG = "Failed play.";
-            constexpr const char* APP_FNC_FAIL_PLAY_FIRST_MSG = "Failed to play first track.";
-            constexpr const char* APP_FNC_FAIL_PLAY_LAST_MSG = "Failed to play last track.";
-            constexpr const char* APP_FNC_TRY_PLAY_MSG = "Track is already playing or not selected.";
-            constexpr const char* APP_FNC_TRY_PAUSE_MSG = "Track is already paused or not playing.";
-            constexpr const char* APP_FNC_TRY_STOP_MSG = "Track is already stopped.";
-            constexpr const char* APP_FNC_TRY_NEXT_MSG = "No next track.";
-            constexpr const char* APP_FNC_TRY_PREV_MSG = "No previous track.";
+            constexpr const char* APP_FNC_LOW_ARG = "...Too low arguments...";
+            constexpr const char* APP_FNC_INVALID_ARG = "Invalid argument.";
+            constexpr const char* APP_FNC_INVALID_INDEX = "Invalid index.";
+            constexpr const char* APP_FNC_UNKNOWN_CMD = "Unknown command.";
+            constexpr const char* APP_FNC_UNKNOWN_HELP = "Unknown help topic.";
+            constexpr const char* APP_FNC_TOTAL_TRACKS = "Total tracks found: ";
+            constexpr const char* APP_FNC_LIB_RESET = "Library refreshed.";
+            constexpr const char* APP_FNC_CUR_TRACK = " <- current/selected";
+            constexpr const char* APP_FNC_ERR_UNEXP = "Unexpected Error.";
+            constexpr const char* APP_FNC_ERR_TRY_PLAY_FILE = "Error while trying to play: ";
+            constexpr const char* APP_FNC_ERR_LIBRARY_EMPTY = "Track library is empty.";
+            constexpr const char* APP_FNC_PATH_EMPTY = "Path is empty.";
+            constexpr const char* APP_FNC_PATH_NOT_EXISTS = "Path is not exists.";
+            constexpr const char* APP_FNC_PATH_NOT_DIR = "Path is not a directory.";
+            constexpr const char* APP_FNC_FAIL_SET_INDEX = "Failed to set current track index.";
+            constexpr const char* APP_FNC_FAIL_PLAY = "Failed play.";
+            constexpr const char* APP_FNC_FAIL_PLAY_FIRST = "Failed to play first track.";
+            constexpr const char* APP_FNC_FAIL_PLAY_LAST = "Failed to play last track.";
+            constexpr const char* APP_FNC_TRY_PLAY = "Track is already playing or not selected.";
+            constexpr const char* APP_FNC_TRY_PAUSE = "Track is already paused or not playing.";
+            constexpr const char* APP_FNC_TRY_STOP = "Track is already stopped.";
+            constexpr const char* APP_FNC_TRY_NEXT = "No next track.";
+            constexpr const char* APP_FNC_TRY_PREV = "No previous track.";
         };
     };
 };

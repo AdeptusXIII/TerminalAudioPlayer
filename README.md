@@ -5,7 +5,7 @@ Terminal Audio Player is a small C++ learning project.
 The goal is to build a terminal-based audio player while practicing basic software architecture:
 input handling, terminal UI, command processing, state management, track library scanning, and audio playback.
 
-Current project version: `0.17`
+Current project version: `0.18`
 
 ## Status
 
@@ -21,6 +21,10 @@ The player is usable, but still experimental. It is mainly built as a learning p
 - Command history navigation
 - Editable input line with cursor movement
 - Track scanning from `~/Music/TAP_content`
+- Manual directory scanning into a temporary buffer list
+- Recursive directory scanning with `scan -r`
+- Persistent `all` track list storage
+- Runtime track lists: `buffer`, `all`, `favorite`, and custom lists
 - Automatic content directory creation on first launch
 - Audio file filtering
 - Track list
@@ -125,6 +129,26 @@ or restart the program.
 
 Do not run the player with `sudo`. The content directory should belong to your normal user.
 
+You can also scan another directory manually:
+
+```text
+scan <path>
+```
+
+This scans only files directly inside the target directory.
+
+For recursive scanning through all nested directories:
+
+```text
+scan -r <path>
+```
+
+Scan results are placed into the temporary `buffer` list. To save scanned tracks into the persistent `all` list:
+
+```text
+pl all add all from buffer
+```
+
 ## Basic Usage
 
 Type commands into the input line and press Enter.
@@ -146,12 +170,53 @@ next
 prev
 select <index>
 find <text>
+scan <path>
+scan -r <path>
+pl list
+pl use <buffer|all|favorite|name|index>
+pl create <name>
+pl delete <name>
+pl <list> list
+pl all add <index|all> from buffer
+pl favorite add <index> from <buffer|all|name>
+pl favorite remove <index>
+pl <name> add <index|all> from <buffer|all|favorite|name>
+pl <name> remove <index>
 mode <once|loop-one|loop-all|loop-shuffle>
 volume <0..100>
 status
 refresh
 exit
 ```
+
+## Track Lists
+
+The player currently has these list types:
+
+```text
+buffer     temporary output of the latest scan command
+all        persistent list of tracks known by the player
+favorite   runtime favorite list
+custom     runtime user-created lists
+```
+
+`list`, `play`, `select`, `next`, and `prev` work with the active list.
+
+Use:
+
+```text
+pl list
+```
+
+to show available lists, and:
+
+```text
+pl use <buffer|all|favorite|name|index>
+```
+
+to switch the active list.
+
+Only `all` is persisted at this stage. `buffer`, `favorite`, and custom lists are runtime-only for now.
 
 ## TUI Controls
 

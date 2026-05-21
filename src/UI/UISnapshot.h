@@ -24,6 +24,7 @@ struct FUISnapshotData
     int TrackIndex = -1;
     float Volume = -1.f;
     
+    std::string ActiveTrackListName = "all";
     std::string CurrentTrackName = "None";
     std::vector<std::string> TrackList = {"None"};
 };

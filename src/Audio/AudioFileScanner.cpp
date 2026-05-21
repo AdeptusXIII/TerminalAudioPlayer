@@ -16,50 +16,107 @@ MAudioFileScanner::MAudioFileScanner()
     
 }
 
-std::vector<std::filesystem::path> MAudioFileScanner::ScanPath(const std::filesystem::path &InPath) 
+FScanResult MAudioFileScanner::ScanPath(const std::filesystem::path &InPath) 
 {
-    if (InPath.empty()) 
+    FScanResult Result;
+    
+    if (InPath.empty())
     {
-        std::cerr << "[AudioFileScanner] Path is " << InPath << " empty." << std::endl;
-        return {};
+        Result.Status = EScanResultStatus::EmptyPath;
+        return Result;
     }
+    
     std::error_code EC;
     const bool bExists = std::filesystem::exists(InPath, EC);
-    if (EC) 
+    
+    if (EC)
     {
-        std::cerr << "[AudioFileScanner] Error checking path: " << EC.message() << std::endl;
-        return {};
+        Result.Status = EScanResultStatus::UnexpectedError;
+        return Result;
     }
     if (!bExists)
     {
-        std::cerr << "[AudioFileScanner] Path does not exist: " << InPath << std::endl;
-        return {};
+        Result.Status = EScanResultStatus::PathDoesNotExist;
+        return Result;
     }
 
     if (!std::filesystem::is_directory(InPath))
     {
-        std::cerr << "[AudioFileScanner] Path is not a directory: " << InPath << std::endl;
-        return {};
+        Result.Status = EScanResultStatus::PathIsNotDirectory;
+        return Result;
     }
-
-    
-    std::vector<std::filesystem::path> FilePathsList;
     
     for (const auto& Entry : std::filesystem::directory_iterator(InPath)) 
     {
         if (IsAudioFile(Entry.path())) 
         {
-            FilePathsList.push_back(Entry.path());
+            Result.Tracks.push_back(Entry.path());
         }
     }
     
-    std::sort(FilePathsList.begin(), FilePathsList.end(),
+    std::sort(Result.Tracks.begin(), Result.Tracks.end(),
         [&](const std::filesystem::path& A, const std::filesystem::path& B) 
         {
             return IsStringHigherPriority(A.stem().string(), B.stem().string());
         });
     
-    return FilePathsList;
+    return Result;
+}
+
+FScanResult MAudioFileScanner::ScanPathRecursive(const std::filesystem::path &InPath)
+{
+    FScanResult Result;
+    
+    if (InPath.empty())
+    {
+        Result.Status = EScanResultStatus::EmptyPath;
+        return Result;
+    }
+    
+    std::error_code EC;
+    const bool bExists = std::filesystem::exists(InPath, EC);
+    
+    if (EC)
+    {
+        Result.Status = EScanResultStatus::UnexpectedError;
+        return Result;
+    }
+    if (!bExists)
+    {
+        Result.Status = EScanResultStatus::PathDoesNotExist;
+        return Result;
+    }
+
+    if (!std::filesystem::is_directory(InPath))
+    {
+        Result.Status = EScanResultStatus::PathIsNotDirectory;
+        return Result;
+    }
+    
+    for (const auto& Entry : std::filesystem::recursive_directory_iterator(
+        InPath,
+        std::filesystem::directory_options::skip_permission_denied,
+        EC)) 
+    {
+        if (EC)
+        {
+            EC.clear();
+            continue;
+        }
+        
+        if (IsAudioFile(Entry.path())) 
+        {
+            Result.Tracks.push_back(Entry.path());
+        }
+    }
+    
+    std::sort(Result.Tracks.begin(), Result.Tracks.end(),
+        [&](const std::filesystem::path& A, const std::filesystem::path& B) 
+        {
+            return IsStringHigherPriority(A.stem().string(), B.stem().string());
+        });
+    
+    return Result;
 }
 
 bool MAudioFileScanner::IsAudioFile(const std::filesystem::path &InPath) const

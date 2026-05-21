@@ -11,10 +11,6 @@ MAudioBackend::MAudioBackend()
 {
 }
 
-void MAudioBackend::Init() 
-{
-}
-
 bool MAudioBackend::PlayTrack(const std::filesystem::path &TrackPath)
 {
     if (Sound.has_value()) Sound->stop();

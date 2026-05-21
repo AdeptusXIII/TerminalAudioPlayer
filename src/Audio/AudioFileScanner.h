@@ -5,13 +5,29 @@
 #include <unordered_set>
 #include <vector>
 
+enum class EScanResultStatus
+{
+    Success,
+    EmptyPath,
+    PathDoesNotExist,
+    PathIsNotDirectory,
+    UnexpectedError
+};
+
+struct FScanResult
+{
+    EScanResultStatus Status = EScanResultStatus::Success;
+    std::vector<std::filesystem::path> Tracks;
+};
+
 class MAudioFileScanner 
 {
     static const std::unordered_set<std::string> AllowedExtensions;
 public:
     MAudioFileScanner();
     
-    std::vector<std::filesystem::path> ScanPath(const std::filesystem::path &InPath);
+    FScanResult ScanPath(const std::filesystem::path &InPath);
+    FScanResult ScanPathRecursive(const std::filesystem::path &InPath);
 
 private:
     bool IsAudioFile(const std::filesystem::path& InPath) const;
@@ -21,4 +37,3 @@ private:
     /** Строка А приоритетнее Б? */
     bool IsStringHigherPriority(const std::string& A, const std::string& B) const;
 };
-

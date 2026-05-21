@@ -89,6 +89,16 @@ inline std::string CommandTypeToString(ECommandType CommandType)
             StringCommand = "find";
             break;
         }
+        case ECommandType::Scan:
+        {
+            StringCommand = "scan";
+            break;
+        }
+        case ECommandType::Playlist:
+        {
+            StringCommand = "pl";
+            break;
+        }
         case ECommandType::Unknown:
         {
             StringCommand = {};
@@ -245,6 +255,16 @@ inline std::string RequiredArgDataTypeToString(ECommandType CommandType)
             Arg = "<name>";
             break;
         }
+        case ECommandType::Scan:
+        {
+            Arg = "<path>";
+            break;
+        }
+        case ECommandType::Playlist:
+        {
+            Arg = "<list|use|create|delete|...>";
+            break;
+        }
         case ECommandType::Unknown:
         {
             Arg = "";
@@ -253,6 +273,20 @@ inline std::string RequiredArgDataTypeToString(ECommandType CommandType)
     }
     
     return Arg;
+}
+
+inline std::string CommandFlagToString(ECommandFlag CommandFlag)
+{
+    std::string CommandFlagStr = {};
+    switch (CommandFlag)
+    {
+        case ECommandFlag::Recursive:
+        {
+            CommandFlagStr = "-r";
+        }
+    }
+    
+    return CommandFlagStr;
 }
 
 };

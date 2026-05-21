@@ -11,8 +11,8 @@
 #include <vector>
 
 constexpr int MinimumTerminalWidth = 72;
-constexpr int MinimumTerminalHeight = 18;
-constexpr int MinimumStatusWindowHeight = 7;
+constexpr int MinimumTerminalHeight = 19;
+constexpr int MinimumStatusWindowHeight = 8;
 constexpr int MinimumOutputWindowHeight = 8;
 constexpr int MinimumInputWindowHeight = 3;
 
@@ -52,6 +52,8 @@ struct FTUIInputEvent
 {
     bool bHasInput = false;
     bool bIsSpecialKey = false;
+    bool bIsMouseWheelUp = false;
+    bool bIsMouseWheelDown = false;
     int KeyCode = 0;
     wchar_t Character = L'\0';
 };
@@ -90,6 +92,7 @@ public:
     void PrintStatus(const FUISnapshotData &UISnapshot, const FTrackInfo &TrackInfo);
     void PrintFindResults(const std::vector<std::pair<int, std::string>> &FoundTracks);
     void PrintOutputMessage(const std::string &Message);
+    void PrintOutputLines(const std::vector<std::string> &Lines);
     //------------------------------------------------------------------------------------------------------------------
     
 private:
@@ -120,7 +123,6 @@ private:
     //------------------------------------------------------------------------------------------------------------------
     void DeleteTUIWindows();
     void CreateTUIWindows(const FTUILayout &Layout);
-    void PrintOutputLines(const std::vector<std::string> &Lines);
     void SetOutputLines(const std::vector<std::string> &Lines);
     void RebuildOutputRenderLines();
     void AppendWrappedOutputRenderLines(const std::wstring& Line, int MaxPrintableColumns);

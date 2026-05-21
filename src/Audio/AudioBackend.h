@@ -10,8 +10,6 @@ class MAudioBackend
 {
 public:
     MAudioBackend();
-    
-    void Init();
 
     bool PlayTrack(const std::filesystem::path &TrackPath);
     bool ResumeTrack();

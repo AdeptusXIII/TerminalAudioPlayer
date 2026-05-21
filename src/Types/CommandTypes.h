@@ -21,7 +21,14 @@ enum class ECommandType
     Select,
     Volume,
     Status,
-    Find
+    Find,
+    Scan,
+    Playlist
+};
+
+enum class ECommandFlag
+{
+    Recursive
 };
 
 struct FCommand
