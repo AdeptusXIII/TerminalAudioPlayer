@@ -787,12 +787,20 @@ void MEngine::PrintTrackListSummaries()
     
     {
         std::lock_guard<std::mutex> Lock(EngineMutex);
-        
-        for (const std::string& Summary : TrackLibrary.GetTrackListSummaries())
+
+        const std::vector<std::string> Summaries = TrackLibrary.GetTrackListSummaries();
+
+        for (std::size_t i = 0; i < Summaries.size(); i++)
         {
-            Lines.emplace_back("  " + Summary);
+            const bool bLastItem = (i == Summaries.size() - 1);
+
+            const std::string Separator = bLastItem
+                ? stp::sep::SUBCAT_SEP_L
+                : stp::sep::SUBCAT_SEP_T;
+
+            Lines.emplace_back(stp::sep::SUBCAT_SEP_TAB + Separator + Summaries[i]);
         }
-        
+
         Lines.emplace_back("Active: " + TrackLibrary.GetActiveTrackListName());
     }
     
