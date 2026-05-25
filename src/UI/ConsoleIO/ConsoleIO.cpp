@@ -804,8 +804,10 @@ void MConsoleIO::PrintCommandHelpArg(ECommandType CommandType)
             HelpEntryEXT.Usage.emplace_back("pl delete <name>");
             HelpEntryEXT.Usage.emplace_back("pl <list> list");
             HelpEntryEXT.Usage.emplace_back("pl all add <index|all> from buffer");
+            HelpEntryEXT.Usage.emplace_back("pl favorite add <index>");
             HelpEntryEXT.Usage.emplace_back("pl favorite add <index> from <buffer|all|name>");
             HelpEntryEXT.Usage.emplace_back("pl favorite remove <index>");
+            HelpEntryEXT.Usage.emplace_back("pl <name> add <index|all>");
             HelpEntryEXT.Usage.emplace_back("pl <name> add <index|all> from <buffer|all|favorite|name>");
             HelpEntryEXT.Usage.emplace_back("pl <name> remove <index>");
             
@@ -816,13 +818,16 @@ void MConsoleIO::PrintCommandHelpArg(ECommandType CommandType)
             HelpEntryEXT.Description.emplace_back("all is the persistent list of tracks known by the player.");
             HelpEntryEXT.Description.emplace_back("favorite contains favorite tracks and every favorite track is also added to all.");
             HelpEntryEXT.Description.emplace_back("pl use changes the active list used by list/play/select/next/prev.");
+            HelpEntryEXT.Description.emplace_back("add without from uses the current active list as the source.");
             HelpEntryEXT.Description.emplace_back("Only all is currently saved to library.txt. Custom and favorite lists are runtime-only for now.");
             
             HelpEntryEXT.Examples.emplace_back("pl list");
             HelpEntryEXT.Examples.emplace_back("pl use buffer");
             HelpEntryEXT.Examples.emplace_back("pl all add all from buffer");
+            HelpEntryEXT.Examples.emplace_back("pl favorite add 3");
             HelpEntryEXT.Examples.emplace_back("pl favorite add 3 from buffer");
             HelpEntryEXT.Examples.emplace_back("pl create raskol");
+            HelpEntryEXT.Examples.emplace_back("pl raskol add 5");
             HelpEntryEXT.Examples.emplace_back("pl raskol add 5 from all");
             HelpEntryEXT.Examples.emplace_back("pl use raskol");
             break;

@@ -179,8 +179,10 @@ pl create <name>
 pl delete <name>
 pl <list> list
 pl all add <index|all> from buffer
+pl favorite add <index>
 pl favorite add <index> from <buffer|all|name>
 pl favorite remove <index>
+pl <name> add <index|all>
 pl <name> add <index|all> from <buffer|all|favorite|name>
 pl <name> remove <index>
 mode <once|loop-one|loop-all|loop-shuffle>
@@ -202,6 +204,7 @@ custom     runtime user-created lists
 ```
 
 `list`, `play`, `select`, `next`, and `prev` work with the active list.
+Playlist `add` commands without `from <source>` use the active list as the source.
 
 Use:
 

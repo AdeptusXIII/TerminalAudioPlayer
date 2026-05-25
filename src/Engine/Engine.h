@@ -18,6 +18,15 @@
 struct FUISnapshotData;
 struct FTrackInfo;
 
+struct FNowPlayingInfo
+{
+    std::filesystem::path Path;
+    std::string TrackName = "None";
+    std::string SourceListName = "None";
+    int SourceIndex = -1;
+    bool bValid = false;
+};
+
 class MEngine 
 {
 public:
@@ -67,6 +76,7 @@ private: // --- Functions ---
     bool TryPlayNextTrackOrFirst();
     bool TryPlayPrevTrackOrLast();
     bool TryPlayRandomTrack();
+    bool TryPlayCurrentTrack();
     
     void StartAudioSyncThread();
     void StopAudioSyncThread();
@@ -77,11 +87,15 @@ private: // --- Functions ---
     
     FUISnapshotData BuildUISnapshotData();
     FTrackInfo BuildTrackInfoData();
+    void SetNowPlaying(const std::filesystem::path& Path);
+    void ClearNowPlaying();
 
 private: // --- Variables ---
     
     EAudioPlayerState AudioPlayerState;
     EPlaybackMode PlaybackMode;
+    
+    FNowPlayingInfo NowPlayingInfo;
     
     bool bWantExit;
     bool bPausedBySystemSleep;

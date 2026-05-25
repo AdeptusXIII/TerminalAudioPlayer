@@ -89,6 +89,7 @@ void MEngine::SyncAudioState()
 {
     EPlaybackMode CurrentPlaybackMode = EPlaybackMode::Once;
     bool bShouldReact = false;
+    bool bNowPlayingFromActiveList = true;
     
     {
         std::lock_guard<std::mutex> Lock(EngineMutex);
@@ -97,6 +98,8 @@ void MEngine::SyncAudioState()
         {
             bShouldReact = true;
             CurrentPlaybackMode = PlaybackMode;
+            bNowPlayingFromActiveList = NowPlayingInfo.bValid
+                && NowPlayingInfo.SourceListName == TrackLibrary.GetActiveTrackListName();
         }
     }
     
@@ -104,7 +107,12 @@ void MEngine::SyncAudioState()
     
     if (CurrentPlaybackMode == EPlaybackMode::LoopAll) 
     {
-        if (TryPlayNextTrackOrFirst()) 
+        if (bNowPlayingFromActiveList && TryPlayNextTrackOrFirst()) 
+        {
+            return;
+        }
+        
+        if (!bNowPlayingFromActiveList && TryPlayCurrentTrack())
         {
             return;
         }
@@ -120,6 +128,7 @@ void MEngine::SyncAudioState()
     
     std::lock_guard<std::mutex> Lock(EngineMutex);
     SetAudioPlayerState(EAudioPlayerState::Idle);
+    ClearNowPlaying();
 }
 
 void MEngine::RunCommandLineLoop()
@@ -680,6 +689,25 @@ void MEngine::HandlePlaylistCommand(const std::vector<std::string> &Args)
             : std::string(stp::msg::APP_LIST) + "Failed to add favorite.");
         return;
     }
+
+    if ((Target == "favorite" || Target == "fav") && Args.size() >= 3 && Args[1] == "add")
+    {
+        const int Index = CommandArgIsInt(Args[2]) ? std::stoi(Args[2]) : -1;
+        
+        std::lock_guard<std::mutex> Lock(EngineMutex);
+        const std::string SourceListName = TrackLibrary.GetActiveTrackListName();
+        const bool bChanged = TrackLibrary.AddToFavoritesFromList(SourceListName, Index);
+        
+        if (bChanged)
+        {
+            SaveAllTrackList();
+        }
+        
+        ConsoleIO.PrintOutputMessage(bChanged
+            ? std::string(stp::msg::APP_LIST) + "Added to favorite from active list: " + SourceListName
+            : std::string(stp::msg::APP_LIST) + "Failed to add favorite.");
+        return;
+    }
     
     if ((Target == "favorite" || Target == "fav") && Args.size() >= 3 && Args[1] == "remove")
     {
@@ -722,6 +750,26 @@ void MEngine::HandlePlaylistCommand(const std::vector<std::string> &Args)
         
         ConsoleIO.PrintOutputMessage(bChanged
             ? std::string(stp::msg::APP_LIST) + "Track added."
+            : std::string(stp::msg::APP_LIST) + "Failed to add track.");
+        return;
+    }
+
+    if (Args.size() >= 3 && Args[1] == "add")
+    {
+        const bool bAddAll = Args[2] == "all";
+        const int Index = bAddAll ? -1 : (CommandArgIsInt(Args[2]) ? std::stoi(Args[2]) : -1);
+        
+        std::lock_guard<std::mutex> Lock(EngineMutex);
+        const std::string SourceListName = TrackLibrary.GetActiveTrackListName();
+        const bool bChanged = TrackLibrary.AddToTrackListFromList(Target, SourceListName, bAddAll, Index);
+        
+        if (bChanged)
+        {
+            SaveAllTrackList();
+        }
+        
+        ConsoleIO.PrintOutputMessage(bChanged
+            ? std::string(stp::msg::APP_LIST) + "Track added from active list: " + SourceListName
             : std::string(stp::msg::APP_LIST) + "Failed to add track.");
         return;
     }
@@ -900,6 +948,7 @@ void MEngine::HandleSelectCommand(const std::string &ArgIndex)
                     ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR) + stp::msg::fnc::APP_FNC_FAIL_SET_INDEX);
                     return;
                 }
+                SetNowPlaying(Path);
                 return;
             }
 
@@ -909,6 +958,7 @@ void MEngine::HandleSelectCommand(const std::string &ArgIndex)
         {
             SetAudioPlayerState(EAudioPlayerState::Idle);
             AudioBackend.StopTrack();
+            ClearNowPlaying();
         
             if (!TrackLibrary.SetCurrentIndex(TrackIndex)) 
             {
@@ -1010,6 +1060,7 @@ void MEngine::RefreshTrackLibrary(const std::filesystem::path &InPath)
     {
         AudioBackend.StopTrack();
         SetAudioPlayerState(EAudioPlayerState::Idle);
+        ClearNowPlaying();
     }
     
     TrackLibrary.SetAllTracks(ScanResult.Tracks);
@@ -1071,6 +1122,7 @@ bool MEngine::TryPrev()
         {
             SetAudioPlayerState(EAudioPlayerState::Playing);
             TrackLibrary.SetPrevIndex();
+            SetNowPlaying(Path);
             return true;
         }
         else 
@@ -1087,6 +1139,7 @@ bool MEngine::TryPrev()
     {
         SetAudioPlayerState(EAudioPlayerState::Idle);
         AudioBackend.StopTrack();
+        ClearNowPlaying();
         TrackLibrary.SetPrevIndex();
         return true;
     }
@@ -1113,6 +1166,7 @@ bool MEngine::TryPlay()
         if (AudioBackend.PlayTrack(Path)) 
         {
             SetAudioPlayerState(EAudioPlayerState::Playing);
+            SetNowPlaying(Path);
             return true;
         }
         else 
@@ -1156,6 +1210,7 @@ bool MEngine::TryStop()
         if (AudioBackend.StopTrack()) 
         {
             SetAudioPlayerState(EAudioPlayerState::Idle);
+            ClearNowPlaying();
             bContinue = true;
         }
     }
@@ -1174,6 +1229,7 @@ bool MEngine::TryNext()
         {
             SetAudioPlayerState(EAudioPlayerState::Playing);
             TrackLibrary.SetNextIndex();
+            SetNowPlaying(Path);
             return true;
         }
         else 
@@ -1190,6 +1246,7 @@ bool MEngine::TryNext()
     {
         SetAudioPlayerState(EAudioPlayerState::Idle);
         AudioBackend.StopTrack();
+        ClearNowPlaying();
         TrackLibrary.SetNextIndex();
         return true;
     }
@@ -1209,6 +1266,7 @@ bool MEngine::TryPlayNextTrackOrFirst()
         {
             TrackLibrary.SetCurrentIndex(0);
             SetAudioPlayerState(EAudioPlayerState::Playing);
+            SetNowPlaying(FirstTrackPath);
             return true;
         }
         
@@ -1220,6 +1278,7 @@ bool MEngine::TryPlayNextTrackOrFirst()
     {
         TrackLibrary.SetNextIndex();
         SetAudioPlayerState(EAudioPlayerState::Playing);
+        SetNowPlaying(Path);
         return true;
     }
     
@@ -1239,6 +1298,7 @@ bool MEngine::TryPlayPrevTrackOrLast()
         {
             TrackLibrary.SetCurrentIndex(TrackLibrary.GetTrackListSize() - 1);
             SetAudioPlayerState(EAudioPlayerState::Playing);
+            SetNowPlaying(LastTrackPath);
             return true;
         }
         
@@ -1248,8 +1308,9 @@ bool MEngine::TryPlayPrevTrackOrLast()
     
     if (AudioBackend.PlayTrack(Path)) 
     {
-        TrackLibrary.SetNextIndex();
+        TrackLibrary.SetPrevIndex();
         SetAudioPlayerState(EAudioPlayerState::Playing);
+        SetNowPlaying(Path);
         return true;
     }
     
@@ -1277,6 +1338,7 @@ bool MEngine::TryPlayRandomTrack()
         if (!Path.empty() && AudioBackend.PlayTrack(Path)) {
             TrackLibrary.SetCurrentIndex(OnlyOneIndex);
             SetAudioPlayerState(EAudioPlayerState::Playing);
+            SetNowPlaying(Path);
             return true;
         }
         
@@ -1297,10 +1359,35 @@ bool MEngine::TryPlayRandomTrack()
     {
         TrackLibrary.SetCurrentIndex(NextIndex);
         SetAudioPlayerState(EAudioPlayerState::Playing);
+        SetNowPlaying(Path);
         return true;
     }
     
     ConsoleIO.PrintOutputMessage(std::string(stp::msg::APP_ERROR) + stp::msg::fnc::APP_FNC_ERR_TRY_PLAY_FILE + TrackLibrary.GetCurrentTrackName());
+    return false;
+}
+
+bool MEngine::TryPlayCurrentTrack()
+{
+    std::lock_guard<std::mutex> Lock(EngineMutex);
+    
+    std::filesystem::path Path = TrackLibrary.GetCurrentTrackPath();
+    if (Path.empty())
+    {
+        Path = TrackLibrary.GetTrackPathByIndex(0);
+        if (!Path.empty())
+        {
+            TrackLibrary.SetCurrentIndex(0);
+        }
+    }
+    
+    if (!Path.empty() && AudioBackend.PlayTrack(Path))
+    {
+        SetAudioPlayerState(EAudioPlayerState::Playing);
+        SetNowPlaying(Path);
+        return true;
+    }
+    
     return false;
 }
 
@@ -1373,7 +1460,10 @@ FUISnapshotData MEngine::BuildUISnapshotData()
         SnapshotData.Volume = CurrentVolume;
         SnapshotData.TrackIndex = TrackLibrary.GetCurrentIndex();
         SnapshotData.ActiveTrackListName = TrackLibrary.GetActiveTrackListName();
-        SnapshotData.CurrentTrackName = TrackLibrary.GetCurrentTrackName();
+        if (NowPlayingInfo.bValid)
+            SnapshotData.CurrentTrackName = NowPlayingInfo.TrackName;
+        else
+            SnapshotData.CurrentTrackName = TrackLibrary.GetCurrentTrackName();
         
         std::vector<std::string> TrackNames;
         
@@ -1391,10 +1481,33 @@ FUISnapshotData MEngine::BuildUISnapshotData()
 FTrackInfo MEngine::BuildTrackInfoData()
 {
     FTrackInfo TrackInfo = {};
+    std::lock_guard<std::mutex> Lock(EngineMutex);
+    
+    if (!NowPlayingInfo.bValid)
+    {
+        TrackInfo.DurationSec = 0.f;
+        TrackInfo.PositionSec = 0.f;
+        TrackInfo.RemainingSec = 0.f;
+        return TrackInfo;
+    }
     
     TrackInfo.DurationSec = AudioBackend.GetTrackDurationSec();
     TrackInfo.PositionSec = AudioBackend.GetTrackCurrentOffsetSec();
     TrackInfo.RemainingSec = AudioBackend.GetTrackRemainingSec();
     
     return TrackInfo;
+}
+
+void MEngine::SetNowPlaying(const std::filesystem::path &Path)
+{
+    NowPlayingInfo.Path = Path;
+    NowPlayingInfo.TrackName = Path.filename().string();
+    NowPlayingInfo.SourceListName = TrackLibrary.GetActiveTrackListName();
+    NowPlayingInfo.SourceIndex = TrackLibrary.GetCurrentIndex();
+    NowPlayingInfo.bValid = true;
+}
+
+void MEngine::ClearNowPlaying()
+{
+    NowPlayingInfo = {};
 }
