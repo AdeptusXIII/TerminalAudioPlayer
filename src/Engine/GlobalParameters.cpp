@@ -8,8 +8,6 @@ namespace gp
 const float MIN_VOLUME = 0;
 const float MAX_VOLUME = 100;
 
-bool bForcePlayAfterSwitch = true;
 bool bPrintDebugInfo = false;
 
 };
-

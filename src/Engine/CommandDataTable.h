@@ -69,11 +69,6 @@ inline std::string CommandTypeToString(ECommandType CommandType)
             StringCommand = "mode";
             break;
         }
-        case ECommandType::Select:
-        {
-            StringCommand = "select";
-            break;
-        }
         case ECommandType::Volume:
         {
             StringCommand = "volume";
@@ -183,7 +178,7 @@ inline std::string RequiredArgDataTypeToString(ECommandType CommandType)
     {
         case ECommandType::Play:
         {
-            Arg = "";
+            Arg = "[<index>|-d <index>]";
             break;
         }
         case ECommandType::Pause:
@@ -198,12 +193,12 @@ inline std::string RequiredArgDataTypeToString(ECommandType CommandType)
         }
         case ECommandType::Next:
         {
-            Arg = "";
+            Arg = "[-d]";
             break;
         }
         case ECommandType::Prev:
         {
-            Arg = "";
+            Arg = "[-d]";
             break;
         }
         case ECommandType::List:
@@ -232,11 +227,6 @@ inline std::string RequiredArgDataTypeToString(ECommandType CommandType)
                       + ct::PlaybackModeToString(EPlaybackMode::LoopOne) + "|"
                       + ct::PlaybackModeToString(EPlaybackMode::LoopAll) + "|"
                       + ct::PlaybackModeToString(EPlaybackMode::LoopShuffle) + ">";
-            break;
-        }
-        case ECommandType::Select:
-        {
-            Arg = "<integer index>";
             break;
         }
         case ECommandType::Volume:
@@ -283,6 +273,12 @@ inline std::string CommandFlagToString(ECommandFlag CommandFlag)
         case ECommandFlag::Recursive:
         {
             CommandFlagStr = "-r";
+            break;
+        }
+        case ECommandFlag::Deferred:
+        {
+            CommandFlagStr = "-d";
+            break;
         }
     }
     

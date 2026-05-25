@@ -27,6 +27,14 @@ struct FNowPlayingInfo
     bool bValid = false;
 };
 
+struct FPendingPlaybackInfo
+{
+    std::filesystem::path Path;
+    std::string SourceListName = "None";
+    int SourceIndex = -1;
+    bool bValid = false;
+};
+
 class MEngine 
 {
 public:
@@ -48,7 +56,9 @@ private: // --- Functions ---
     
     void HandleModeCommand(const std::string &Arg);
     void HandleHelpCommand(const std::string &Arg);
-    void HandleSelectCommand(const std::string &ArgIndex);
+    void HandlePlayCommand(const std::vector<std::string>& Args);
+    void HandleNextCommand(const std::vector<std::string>& Args);
+    void HandlePrevCommand(const std::vector<std::string>& Args);
     bool HandleVolumeCommand(const std::string &Arg);
     void HandleScanCommand(const std::vector<std::string> &Args);
     void HandlePlaylistCommand(const std::vector<std::string>& Args);
@@ -77,6 +87,11 @@ private: // --- Functions ---
     bool TryPlayPrevTrackOrLast();
     bool TryPlayRandomTrack();
     bool TryPlayCurrentTrack();
+    bool TryPlayTrackByIndex(int TrackIndex);
+    bool DeferOrPlayTrackByIndex(int TrackIndex);
+    bool DeferOrPlayNextTrack();
+    bool DeferOrPlayPrevTrack();
+    bool TryPlayPendingTrack();
     
     void StartAudioSyncThread();
     void StopAudioSyncThread();
@@ -89,6 +104,8 @@ private: // --- Functions ---
     FTrackInfo BuildTrackInfoData();
     void SetNowPlaying(const std::filesystem::path& Path);
     void ClearNowPlaying();
+    void SetPendingPlayback(const std::filesystem::path& Path, int SourceIndex);
+    void ClearPendingPlayback();
 
 private: // --- Variables ---
     
@@ -96,6 +113,7 @@ private: // --- Variables ---
     EPlaybackMode PlaybackMode;
     
     FNowPlayingInfo NowPlayingInfo;
+    FPendingPlaybackInfo PendingPlaybackInfo;
     
     bool bWantExit;
     bool bPausedBySystemSleep;

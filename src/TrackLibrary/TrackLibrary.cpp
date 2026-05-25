@@ -320,7 +320,7 @@ bool MTrackLibrary::RemoveFromTrackList(const std::string &ListName, int TrackIn
 {
     FTrackList* List = FindTrackListByName(ListName);
     
-    if (List == nullptr || List->Kind == ETrackListKind::Buffer || List->Kind == ETrackListKind::All)
+    if (List == nullptr || List->Kind == ETrackListKind::Buffer)
     {
         return false;
     }

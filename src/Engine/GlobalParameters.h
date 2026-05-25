@@ -8,6 +8,5 @@ namespace gp
 const extern float MAX_VOLUME;
 const extern float MIN_VOLUME;
 
-extern bool bForcePlayAfterSwitch;
 extern bool bPrintDebugInfo;
 };

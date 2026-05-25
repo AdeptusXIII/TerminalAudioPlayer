@@ -29,7 +29,7 @@ The player is usable, but still experimental. It is mainly built as a learning p
 - Audio file filtering
 - Track list
 - Track search by name
-- Select track by index
+- Play track by index
 - Play, pause, resume, stop
 - Next and previous track
 - Playback modes:
@@ -168,8 +168,11 @@ play
 pause
 stop
 next
+next -d
 prev
-select <index>
+prev -d
+play <index>
+play -d <index>
 find <text>
 scan <path>
 scan -r <path>
@@ -203,7 +206,7 @@ favorite   runtime favorite list
 custom     runtime user-created lists
 ```
 
-`list`, `play`, `select`, `next`, and `prev` work with the active list.
+`list`, `play`, `next`, and `prev` work with the active list.
 Playlist `add` commands without `from <source>` use the active list as the source.
 
 Use:

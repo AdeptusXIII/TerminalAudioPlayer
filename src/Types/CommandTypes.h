@@ -18,7 +18,6 @@ enum class ECommandType
     Exit,
     Help,
     Mode,
-    Select,
     Volume,
     Status,
     Find,
@@ -28,7 +27,8 @@ enum class ECommandType
 
 enum class ECommandFlag
 {
-    Recursive
+    Recursive,
+    Deferred
 };
 
 struct FCommand

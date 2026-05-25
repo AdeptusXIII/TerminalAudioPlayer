@@ -160,6 +160,10 @@ FCommand MConsoleIO::ParseCommandLine(const std::string &Input)
     if (Tokens[0] == ct::CommandTypeToString(ECommandType::Play)) 
     {
         Command.Type = ECommandType::Play;
+        for (std::size_t i = 1; i < Tokens.size(); i++)
+        {
+            Command.Args.emplace_back(Tokens[i]);
+        }
     }
     if (Tokens[0] == ct::CommandTypeToString(ECommandType::Pause)) 
     {
@@ -172,10 +176,18 @@ FCommand MConsoleIO::ParseCommandLine(const std::string &Input)
     if (Tokens[0] == ct::CommandTypeToString(ECommandType::Next)) 
     {
         Command.Type = ECommandType::Next;
+        for (std::size_t i = 1; i < Tokens.size(); i++)
+        {
+            Command.Args.emplace_back(Tokens[i]);
+        }
     }
     if (Tokens[0] == ct::CommandTypeToString(ECommandType::Prev)) 
     {
         Command.Type = ECommandType::Prev;
+        for (std::size_t i = 1; i < Tokens.size(); i++)
+        {
+            Command.Args.emplace_back(Tokens[i]);
+        }
     }
     if (Tokens[0] == ct::CommandTypeToString(ECommandType::List)) 
     {
@@ -197,11 +209,6 @@ FCommand MConsoleIO::ParseCommandLine(const std::string &Input)
     if (Tokens[0] == ct::CommandTypeToString(ECommandType::Mode)) 
     {
         Command.Type = ECommandType::Mode;
-        if (Tokens.size() >= 2) Command.Args.emplace_back(Tokens[1]);
-    }
-    if (Tokens[0] == ct::CommandTypeToString(ECommandType::Select))
-    {
-        Command.Type = ECommandType::Select;
         if (Tokens.size() >= 2) Command.Args.emplace_back(Tokens[1]);
     }
     if (Tokens[0] == ct::CommandTypeToString(ECommandType::Volume)) 
@@ -371,6 +378,10 @@ FCommand MConsoleIO::ReadCommand()
     if (Tokens[0] == ct::CommandTypeToString(ECommandType::Play)) 
     {
         Command.Type = ECommandType::Play;
+        for (std::size_t i = 1; i < Tokens.size(); i++)
+        {
+            Command.Args.emplace_back(Tokens[i]);
+        }
         Command.RawInput = Input;
         return Command;
     }
@@ -389,12 +400,20 @@ FCommand MConsoleIO::ReadCommand()
     if (Tokens[0] == ct::CommandTypeToString(ECommandType::Next)) 
     {
         Command.Type = ECommandType::Next;
+        for (std::size_t i = 1; i < Tokens.size(); i++)
+        {
+            Command.Args.emplace_back(Tokens[i]);
+        }
         Command.RawInput = Input;
         return Command;
     }
     if (Tokens[0] == ct::CommandTypeToString(ECommandType::Prev)) 
     {
         Command.Type = ECommandType::Prev;
+        for (std::size_t i = 1; i < Tokens.size(); i++)
+        {
+            Command.Args.emplace_back(Tokens[i]);
+        }
         Command.RawInput = Input;
         return Command;
     }
@@ -426,13 +445,6 @@ FCommand MConsoleIO::ReadCommand()
     if (Tokens[0] == ct::CommandTypeToString(ECommandType::Mode)) 
     {
         Command.Type = ECommandType::Mode;
-        if (Tokens.size() >= 2) Command.Args.emplace_back(Tokens[1]);
-        Command.RawInput = Input;
-        return Command;
-    }
-    if (Tokens[0] == ct::CommandTypeToString(ECommandType::Select)) 
-    {
-        Command.Type = ECommandType::Select;
         if (Tokens.size() >= 2) Command.Args.emplace_back(Tokens[1]);
         Command.RawInput = Input;
         return Command;
@@ -536,11 +548,11 @@ void MConsoleIO::PrintCommandHelp()
 {
     std::vector<FHelpEntry> HelpEntries =
     {
-        { ct::CommandTypeToString(ECommandType::Play), "Resume or start playback" },
+        { ct::CommandTypeToString(ECommandType::Play), "Resume, start, or queue playback" },
         { ct::CommandTypeToString(ECommandType::Pause), "Pause current track" },
         { ct::CommandTypeToString(ECommandType::Stop), "Stop current track" },
-        { ct::CommandTypeToString(ECommandType::Next), "Play next track" },
-        { ct::CommandTypeToString(ECommandType::Prev), "Play previous track" },
+        { ct::CommandTypeToString(ECommandType::Next), "Play or queue next track" },
+        { ct::CommandTypeToString(ECommandType::Prev), "Play or queue previous track" },
         { ct::CommandTypeToString(ECommandType::List), "Show track list" },
         { ct::CommandTypeToString(ECommandType::Refresh), "Rescan track library" },
         { ct::CommandTypeToString(ECommandType::Scan) + " " + ct::RequiredArgDataTypeToString(ECommandType::Scan),
@@ -549,8 +561,6 @@ void MConsoleIO::PrintCommandHelp()
             "Manage track lists" },
         { ct::CommandTypeToString(ECommandType::Mode) + " " + ct::RequiredArgDataTypeToString(ECommandType::Mode),
             "Set playback mode" },
-        { ct::CommandTypeToString(ECommandType::Select) + " " + ct::RequiredArgDataTypeToString(ECommandType::Select),
-            "Play track by index" },
         { ct::CommandTypeToString(ECommandType::Volume) + " " + ct::RequiredArgDataTypeToString(ECommandType::Volume),
             "Set global player volume" },
         { ct::CommandTypeToString(ECommandType::Status), "Show player status" },
@@ -591,10 +601,20 @@ void MConsoleIO::PrintCommandHelpArg(ECommandType CommandType)
         case ECommandType::Play:
         {
             HelpEntryEXT.Usage.emplace_back(ct::CommandTypeToString(ECommandType::Play));
+            HelpEntryEXT.Usage.emplace_back(ct::CommandTypeToString(ECommandType::Play) + " <index>");
+            HelpEntryEXT.Usage.emplace_back(ct::CommandTypeToString(ECommandType::Play) + " " +
+                ct::CommandFlagToString(ECommandFlag::Deferred) + " <index>");
             
-            HelpEntryEXT.Description.emplace_back("Resumes or initiates playback of a track.");
+            HelpEntryEXT.Description.emplace_back("Resumes playback if the current track is paused.");
+            HelpEntryEXT.Description.emplace_back("Starts the currently selected track if the player is idle.");
+            HelpEntryEXT.Description.emplace_back("play <index> immediately starts a track by index from the active list.");
+            HelpEntryEXT.Description.emplace_back("play -d <index> defers the indexed track until the current track finishes.");
+            HelpEntryEXT.Description.emplace_back("If nothing is playing, deferred play starts immediately.");
             
             HelpEntryEXT.Examples.emplace_back(ct::CommandTypeToString(ECommandType::Play));
+            HelpEntryEXT.Examples.emplace_back(ct::CommandTypeToString(ECommandType::Play) + " 4");
+            HelpEntryEXT.Examples.emplace_back(ct::CommandTypeToString(ECommandType::Play) + " " +
+                ct::CommandFlagToString(ECommandFlag::Deferred) + " 4");
             break;
         }
         case ECommandType::Pause:
@@ -618,21 +638,33 @@ void MConsoleIO::PrintCommandHelpArg(ECommandType CommandType)
         case ECommandType::Next:
         {
             HelpEntryEXT.Usage.emplace_back(ct::CommandTypeToString(ECommandType::Next));
+            HelpEntryEXT.Usage.emplace_back(ct::CommandTypeToString(ECommandType::Next) + " " +
+                ct::CommandFlagToString(ECommandFlag::Deferred));
             
             HelpEntryEXT.Description .emplace_back("Initiates playback of the next track in the list. If there is no "
                 "next track, it initiates playback of the very first track in the list.");
+            HelpEntryEXT.Description.emplace_back("next -d defers the next track until the current track finishes.");
+            HelpEntryEXT.Description.emplace_back("If nothing is playing, deferred next starts immediately.");
             
             HelpEntryEXT.Examples.emplace_back(ct::CommandTypeToString(ECommandType::Next));
+            HelpEntryEXT.Examples.emplace_back(ct::CommandTypeToString(ECommandType::Next) + " " +
+                ct::CommandFlagToString(ECommandFlag::Deferred));
             break;
         }
         case ECommandType::Prev:
         {
             HelpEntryEXT.Usage.emplace_back(ct::CommandTypeToString(ECommandType::Prev));
+            HelpEntryEXT.Usage.emplace_back(ct::CommandTypeToString(ECommandType::Prev) + " " +
+                ct::CommandFlagToString(ECommandFlag::Deferred));
             
             HelpEntryEXT.Description.emplace_back("Initiates playback of the previous track in the list. "
                 "If there is no previous track, it initiates playback of the very last track in the list.");
+            HelpEntryEXT.Description.emplace_back("prev -d defers the previous track until the current track finishes.");
+            HelpEntryEXT.Description.emplace_back("If nothing is playing, deferred prev starts immediately.");
             
             HelpEntryEXT.Examples.emplace_back(ct::CommandTypeToString(ECommandType::Prev));
+            HelpEntryEXT.Examples.emplace_back(ct::CommandTypeToString(ECommandType::Prev) + " " +
+                ct::CommandFlagToString(ECommandFlag::Deferred));
             break;
         }
         case ECommandType::List:
@@ -722,19 +754,6 @@ void MConsoleIO::PrintCommandHelpArg(ECommandType CommandType)
                 ct::PlaybackModeToString(EPlaybackMode::LoopShuffle));
             break;
         }
-        case ECommandType::Select:
-        {
-            HelpEntryEXT.Usage.emplace_back(ct::CommandTypeToString(ECommandType::Select) + " " + 
-                ct::RequiredArgDataTypeToString(ECommandType::Select));
-            
-            HelpEntryEXT.Description.emplace_back("Initiates playback of a track by index. Use the list command to get"
-            " the track index.");
-            
-            HelpEntryEXT.Examples.emplace_back(ct::CommandTypeToString(ECommandType::Select) + " 5");
-            HelpEntryEXT.Examples.emplace_back(ct::CommandTypeToString(ECommandType::Select) + " 0");
-            HelpEntryEXT.Examples.emplace_back(ct::CommandTypeToString(ECommandType::Select) + " 2");
-            break;
-        }
         case ECommandType::Volume:
         {
             HelpEntryEXT.Usage.emplace_back(ct::CommandTypeToString(ECommandType::Volume) +" " + 
@@ -785,7 +804,7 @@ void MConsoleIO::PrintCommandHelpArg(ECommandType CommandType)
             HelpEntryEXT.Description.emplace_back("scan <path> checks only files directly inside the target directory.");
             HelpEntryEXT.Description.emplace_back("scan " + ct::CommandFlagToString(ECommandFlag::Recursive) + " <path> checks the target directory and all nested directories.");
             HelpEntryEXT.Description.emplace_back("The buffer is temporary and is replaced by the next scan command.");
-            HelpEntryEXT.Description.emplace_back("After scanning, the active list is switched to buffer so list/play/select can inspect it.");
+            HelpEntryEXT.Description.emplace_back("After scanning, the active list is switched to buffer so list/play can inspect it.");
             HelpEntryEXT.Description.emplace_back("Use pl all add <index|all> from buffer to save scanned tracks into the all list.");
             HelpEntryEXT.Description.emplace_back("Paths starting with ~ are expanded to the current user's home directory.");
             
@@ -804,6 +823,7 @@ void MConsoleIO::PrintCommandHelpArg(ECommandType CommandType)
             HelpEntryEXT.Usage.emplace_back("pl delete <name>");
             HelpEntryEXT.Usage.emplace_back("pl <list> list");
             HelpEntryEXT.Usage.emplace_back("pl all add <index|all> from buffer");
+            HelpEntryEXT.Usage.emplace_back("pl all remove <index>");
             HelpEntryEXT.Usage.emplace_back("pl favorite add <index>");
             HelpEntryEXT.Usage.emplace_back("pl favorite add <index> from <buffer|all|name>");
             HelpEntryEXT.Usage.emplace_back("pl favorite remove <index>");
@@ -817,7 +837,7 @@ void MConsoleIO::PrintCommandHelpArg(ECommandType CommandType)
             HelpEntryEXT.Description.emplace_back("buffer is temporary scan output.");
             HelpEntryEXT.Description.emplace_back("all is the persistent list of tracks known by the player.");
             HelpEntryEXT.Description.emplace_back("favorite contains favorite tracks and every favorite track is also added to all.");
-            HelpEntryEXT.Description.emplace_back("pl use changes the active list used by list/play/select/next/prev.");
+            HelpEntryEXT.Description.emplace_back("pl use changes the active list used by list/play/next/prev.");
             HelpEntryEXT.Description.emplace_back("add without from uses the current active list as the source.");
             HelpEntryEXT.Description.emplace_back("Only all is currently saved to library.txt. Custom and favorite lists are runtime-only for now.");
             
