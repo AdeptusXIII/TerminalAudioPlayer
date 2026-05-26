@@ -5,24 +5,24 @@
 #include <string>
 
 /** STRING TEMPLATES */
-namespace stp 
+namespace stp
 {
     /** SEPARATOR */
     namespace sep
     {
         /** SubCategory Separator Type T: "├──" */
         constexpr const char* SUBCAT_SEP_T = "├──";
-        
+
         /** SubCategory Separator Type L: "└──" */
         constexpr const char* SUBCAT_SEP_L = "└──";
-        
+
         /** SubCategory Separator Type I: "│" */
         constexpr const char* SUBCAT_SEP_I = "│";
-        
+
         /** SubCategory Separator Type TAB: "  " */
         constexpr const char* SUBCAT_SEP_TAB = "  ";
     }
-    
+
     /** MESSAGE */
     namespace msg
     {
@@ -35,7 +35,7 @@ namespace stp
         constexpr const char* APP_LIST = "[TAP::LIST] ";
         constexpr const char* APP_FIND = "[TAP::FIND] ";
         constexpr const char* APP_SHUTDOWN = "[TAP::SHUTDOWN] Shutting down...";
-    
+
         /** FUNCTION MESSAGE */
         namespace fnc
         {
@@ -63,5 +63,19 @@ namespace stp
             constexpr const char* APP_FNC_TRY_NEXT = "No next track.";
             constexpr const char* APP_FNC_TRY_PREV = "No previous track.";
         };
-    };
+    }; // namespace msg
+
+    /** SAVE STATE */
+    namespace svst
+    {
+        constexpr const char* S_ALL = "all";
+        constexpr const char* S_FAV = "favorite";
+        constexpr const char* S_CUSTOM = "custom";
+        constexpr const char* S_ACTIVE_LIST = "active-list";
+        constexpr const char* S_PLAYBACK_MODE = "playback-mode";
+        constexpr const char* S_PLAYER_AUDIO_STATE= "player-audio-state";
+        constexpr const char* S_VOLUME= "volume";
+        constexpr const char* S_CURRENT_TRACK= "current-track";
+        constexpr const char* S_CURRENT_POSITION= "current-position";
+    }
 };

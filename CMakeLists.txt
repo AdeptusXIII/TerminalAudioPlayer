@@ -29,10 +29,11 @@ add_executable(terminal_player
         src/Engine/GlobalParameters.h
         src/Engine/GlobalParameters.cpp
         src/Engine/StringTemplates.h
-        src/TrackLibrary/TrackLibraryStorage.cpp
-        src/TrackLibrary/TrackLibraryStorage.h
+        src/PlayerStateStorage/PlayerStateStorage.cpp
+        src/PlayerStateStorage/PlayerStateStorage.h
         src/System/PowerEventWatcher.cpp
         src/System/PowerEventWatcher.h
+        src/Types/PlayerStateTypes.h
 )
 
 target_include_directories(terminal_player PRIVATE src)

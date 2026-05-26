@@ -5,7 +5,7 @@
 #include "Types/PlaybackTypes.h"
 #include "Audio/AudioBackend.h"
 #include "TrackLibrary/TrackLibrary.h"
-#include "TrackLibrary/TrackLibraryStorage.h"
+#include "../PlayerStateStorage/PlayerStateStorage.h"
 #include "Audio/AudioFileScanner.h"
 #include "UI/ConsoleIO/ConsoleIO.h"
 #include "System/PowerEventWatcher.h"
@@ -42,7 +42,6 @@ public:
     
     void Init();
     void SyncAudioState();
-    void RunCommandLineLoop();
     void RunTUILoop();
 
 private: // --- Functions ---
@@ -64,11 +63,10 @@ private: // --- Functions ---
     void HandlePlaylistCommand(const std::vector<std::string>& Args);
     
     bool CommandArgIsInt(const std::string &Arg);
-    bool SaveAllTrackList();
+    bool SavePlayerState();
     void PrintTrackListSummaries();
     std::filesystem::path ExpandUserPath(const std::string& Path) const;
     
-    // UNIVERSAL FUNCTIONS
     void SetAudioPlayerState(EAudioPlayerState TargetAudioPlayerState);
     bool CreateDefaultContentDir();
     void WriteTrackListToTrackLibrary(const std::filesystem::path &InPath);
@@ -127,7 +125,7 @@ private: // --- Variables ---
     
     MAudioBackend AudioBackend;
     MTrackLibrary TrackLibrary;
-    MTrackLibraryStorage TrackLibraryStorage;
+    MPlayerStateStorage PlayerStateStorage;
     MAudioFileScanner AudioFileScanner;
     MConsoleIO ConsoleIO;
     MPowerEventWatcher PowerEventWatcher;

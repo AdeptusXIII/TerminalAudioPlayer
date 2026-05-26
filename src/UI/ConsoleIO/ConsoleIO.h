@@ -82,9 +82,6 @@ public:
     //------------------------------------------------------------------------------------------------------------------
     
     
-    /** Standard COUT-CommandLine-style */
-    //------------------------------------------------------------------------------------------------------------------
-    FCommand ReadCommand();
     void PrintTrackList(const FUISnapshotData &UISnapshot);
     void PrintTotalTracksNum(const int &InTotalTracks);
     void PrintCommandHelp();
@@ -93,8 +90,6 @@ public:
     void PrintFindResults(const std::vector<std::pair<int, std::string>> &FoundTracks);
     void PrintOutputMessage(const std::string &Message);
     void PrintOutputLines(const std::vector<std::string> &Lines);
-    //------------------------------------------------------------------------------------------------------------------
-    
 private:
     
     /** NCURSES ConsoleApp-style */
@@ -137,9 +132,5 @@ private:
     void WriteCommandToHistory(const std::string &Command);
     //------------------------------------------------------------------------------------------------------------------
     
-    
-    /** Standard COUT-CommandLine-style helpers */
-    //------------------------------------------------------------------------------------------------------------------
     std::string FormatTime(float sec);
-    //------------------------------------------------------------------------------------------------------------------
 };

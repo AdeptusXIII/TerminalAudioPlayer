@@ -12,6 +12,7 @@ public:
     MAudioBackend();
 
     bool PlayTrack(const std::filesystem::path &TrackPath);
+    bool LoadTrackPaused(const std::filesystem::path &TrackPath, float PositionSec);
     bool ResumeTrack();
     bool PauseTrack();
     bool StopTrack();
@@ -34,4 +35,6 @@ private:
     
     sf::SoundBuffer Buffer;
     std::optional<sf::Sound> Sound;
+    float CurrentVolume = 100.0f;
+    bool bLooping = false;
 };

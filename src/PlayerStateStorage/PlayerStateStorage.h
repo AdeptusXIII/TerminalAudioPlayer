@@ -2,20 +2,23 @@
 
 #pragma once
 
+#include "Types/PlayerStateTypes.h"
+
 #include <filesystem>
 #include <vector>
 
-class MTrackLibraryStorage
+class MPlayerStateStorage
 {
 public:
-    bool EnsureStorageFileExists();
+    bool EnsureStateFileExists();
+    bool Save(const FPlayerStateData& State);
+    bool Load(FPlayerStateData& OutState);
+
     bool EnsureDirectoryExists(const std::filesystem::path &DirectoryPath) const;
-    std::vector<std::filesystem::path> LoadTrackPaths();
-    bool SaveTrackPaths(const std::vector<std::filesystem::path> &TrackPaths);
-    
+
 private:
-    std::filesystem::path GetStorageFilePath() const;
-    std::filesystem::path GetStorageDirectoryPath() const;
+    std::filesystem::path GetStateFilePath() const;
+
     bool FileExists(const std::filesystem::path &FilePath) const;
     bool CreateEmptyFile(const std::filesystem::path &FilePath) const;
 };

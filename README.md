@@ -5,7 +5,7 @@ Terminal Audio Player is a small C++ learning project.
 The goal is to build a terminal-based audio player while practicing basic software architecture:
 input handling, terminal UI, command processing, state management, track library scanning, and audio playback.
 
-Current project version: `0.18.1`
+Current project version: `0.19.0`
 
 ## Status
 
@@ -23,8 +23,9 @@ The player is usable, but still experimental. It is mainly built as a learning p
 - Track scanning from `~/Music/TAP_content`
 - Manual directory scanning into a temporary buffer list
 - Recursive directory scanning with `scan -r`
-- Persistent `all` track list storage
-- Runtime track lists: `buffer`, `all`, `favorite`, and custom lists
+- Persistent player state storage in `state.txt`
+- Track lists: `buffer`, `all`, `favorite`, and custom lists
+- Persistent `all`, `favorite`, custom lists, active list, volume, playback mode, and paused track position
 - Automatic content directory creation on first launch
 - Audio file filtering
 - Track list
@@ -39,6 +40,7 @@ The player is usable, but still experimental. It is mainly built as a learning p
   - loop-shuffle
 - Volume control
 - Track status with playback time
+- Paused track restoration after restart
 - Scrollable command output
 - Word-wrapped command output
 - Terminal resize handling
@@ -182,6 +184,7 @@ pl create <name>
 pl delete <name>
 pl <list> list
 pl all add <index|all> from buffer
+pl all remove <index>
 pl favorite add <index>
 pl favorite add <index> from <buffer|all|name>
 pl favorite remove <index>
@@ -202,8 +205,8 @@ The player currently has these list types:
 ```text
 buffer     temporary output of the latest scan command
 all        persistent list of tracks known by the player
-favorite   runtime favorite list
-custom     runtime user-created lists
+favorite   persistent favorite list
+custom     persistent user-created lists
 ```
 
 `list`, `play`, `next`, and `prev` work with the active list.
@@ -223,7 +226,16 @@ pl use <buffer|all|favorite|name|index>
 
 to switch the active list.
 
-Only `all` is persisted at this stage. `buffer`, `favorite`, and custom lists are runtime-only for now.
+The player stores persistent state in:
+
+```text
+~/.local/share/TerminalAudioPlayer/state.txt
+```
+
+The state file stores `all`, `favorite`, custom lists, active list, volume, playback mode, and paused track position.
+The `buffer` list is temporary and is replaced by the next `scan` command.
+
+If the player exits while a track is playing, it saves the track as paused. On the next launch, `play` resumes from the saved position.
 
 ## TUI Controls
 
@@ -250,7 +262,7 @@ Mouse Wheel    vertical output scroll, if supported by the terminal
 Minimum terminal size:
 
 ```text
-72x18
+72x19
 ```
 
 If the terminal is smaller, the player shows a "terminal too small" message instead of drawing the full UI.

@@ -357,167 +357,6 @@ std::wstring MConsoleIO::GetPreviousCommandFromHistory()
     return ConvertUtf8ToWide(CommandHistory[CommandHistoryIndex]);
 }
 
-FCommand MConsoleIO::ReadCommand()
-{
-    std::string Input;
-    std::cout << "Enter command: ";
-    std::getline(std::cin, Input);
-    
-    FCommand Command;
-    std::vector<std::string> Tokens;
-    std::istringstream Stream(Input);
-    std::string Word;
-    
-    while (Stream >> Word)
-    {
-        Tokens.push_back(Word);
-    }
-    
-    if (Tokens.empty()) return {}; //за нихуя ретурн нихуя =)
-    
-    if (Tokens[0] == ct::CommandTypeToString(ECommandType::Play)) 
-    {
-        Command.Type = ECommandType::Play;
-        for (std::size_t i = 1; i < Tokens.size(); i++)
-        {
-            Command.Args.emplace_back(Tokens[i]);
-        }
-        Command.RawInput = Input;
-        return Command;
-    }
-    if (Tokens[0] == ct::CommandTypeToString(ECommandType::Pause)) 
-    {
-        Command.Type = ECommandType::Pause;
-        Command.RawInput = Input;
-        return Command;
-    }
-    if (Tokens[0] == ct::CommandTypeToString(ECommandType::Stop)) 
-    {
-        Command.Type = ECommandType::Stop;
-        Command.RawInput = Input;
-        return Command;
-    }
-    if (Tokens[0] == ct::CommandTypeToString(ECommandType::Next)) 
-    {
-        Command.Type = ECommandType::Next;
-        for (std::size_t i = 1; i < Tokens.size(); i++)
-        {
-            Command.Args.emplace_back(Tokens[i]);
-        }
-        Command.RawInput = Input;
-        return Command;
-    }
-    if (Tokens[0] == ct::CommandTypeToString(ECommandType::Prev)) 
-    {
-        Command.Type = ECommandType::Prev;
-        for (std::size_t i = 1; i < Tokens.size(); i++)
-        {
-            Command.Args.emplace_back(Tokens[i]);
-        }
-        Command.RawInput = Input;
-        return Command;
-    }
-    if (Tokens[0] == ct::CommandTypeToString(ECommandType::List)) 
-    {
-        Command.Type = ECommandType::List;
-        Command.RawInput = Input;
-        return Command;
-    }
-    if (Tokens[0] == ct::CommandTypeToString(ECommandType::Refresh)) 
-    {
-        Command.Type = ECommandType::Refresh;
-        Command.RawInput = Input;
-        return Command;
-    }
-    if (Tokens[0] == ct::CommandTypeToString(ECommandType::Exit)) 
-    {
-        Command.Type = ECommandType::Exit;
-        Command.RawInput = Input;
-        return Command;
-    }
-    if (Tokens[0] == ct::CommandTypeToString(ECommandType::Help)) 
-    {
-        Command.Type = ECommandType::Help;
-        if (Tokens.size() >= 2) Command.Args.emplace_back(Tokens[1]);
-        Command.RawInput = Input;
-        return Command;
-    }
-    if (Tokens[0] == ct::CommandTypeToString(ECommandType::Mode)) 
-    {
-        Command.Type = ECommandType::Mode;
-        if (Tokens.size() >= 2) Command.Args.emplace_back(Tokens[1]);
-        Command.RawInput = Input;
-        return Command;
-    }
-    if (Tokens[0] == ct::CommandTypeToString(ECommandType::Volume)) 
-    {
-        Command.Type = ECommandType::Volume;
-        if (Tokens.size() >= 2) Command.Args.emplace_back(Tokens[1]);
-        Command.RawInput = Input;
-        return Command;
-    }
-    if (Tokens[0] == ct::CommandTypeToString(ECommandType::Status)) 
-    {
-        Command.Type = ECommandType::Status;
-        Command.RawInput = Input;
-        return Command;
-    }
-    if (Tokens[0] == ct::CommandTypeToString(ECommandType::Find)) 
-    {
-        Command.Type = ECommandType::Find;
-        if (Tokens.size() >= 2) Command.Args.emplace_back(Tokens[1]);
-        Command.RawInput = Input;
-        return Command;
-    }
-    if (Tokens[0] == ct::CommandTypeToString(ECommandType::Scan)) 
-    {
-        Command.Type = ECommandType::Scan;
-        if (Tokens.size() < 2)
-        {
-            Command.RawInput = Input;
-            return Command;
-        }
-
-        const bool bRecursiveScan = Tokens[1] == ct::CommandFlagToString(ECommandFlag::Recursive);
-        const std::size_t PathStartIndex = bRecursiveScan ? 2 : 1;
-
-        if (PathStartIndex >= Tokens.size())
-        {
-            Command.RawInput = Input;
-            return Command;
-        }
-
-        std::string PathArg = Tokens[PathStartIndex];
-
-        for (std::size_t i = PathStartIndex + 1; i < Tokens.size(); i++)
-        {
-            PathArg += " " + Tokens[i];
-        }
-
-        if (bRecursiveScan)
-        {
-            Command.Args.emplace_back(ct::CommandFlagToString(ECommandFlag::Recursive));
-        }
-
-        Command.Args.emplace_back(PathArg);
-        Command.RawInput = Input;
-        return Command;
-    }
-    if (Tokens[0] == ct::CommandTypeToString(ECommandType::Playlist)) 
-    {
-        Command.Type = ECommandType::Playlist;
-        for (std::size_t i = 1; i < Tokens.size(); i++)
-        {
-            Command.Args.emplace_back(Tokens[i]);
-        }
-        Command.RawInput = Input;
-        return Command;
-    }
-    
-    
-    return {};
-}
-
 void MConsoleIO::PrintTrackList(const FUISnapshotData &UISnapshot)
 {
     std::vector<std::string> Lines;
@@ -839,7 +678,7 @@ void MConsoleIO::PrintCommandHelpArg(ECommandType CommandType)
             HelpEntryEXT.Description.emplace_back("favorite contains favorite tracks and every favorite track is also added to all.");
             HelpEntryEXT.Description.emplace_back("pl use changes the active list used by list/play/next/prev.");
             HelpEntryEXT.Description.emplace_back("add without from uses the current active list as the source.");
-            HelpEntryEXT.Description.emplace_back("Only all is currently saved to library.txt. Custom and favorite lists are runtime-only for now.");
+            HelpEntryEXT.Description.emplace_back("all, favorite, custom lists, active list, volume, playback mode, and paused track position are saved to state.txt.");
             
             HelpEntryEXT.Examples.emplace_back("pl list");
             HelpEntryEXT.Examples.emplace_back("pl use buffer");
@@ -1042,10 +881,6 @@ void MConsoleIO::PrintOutputLines(const std::vector<std::string> &Lines)
     
     if (!bTUIActive || OutputWindow == nullptr)
     {
-        for (const std::string &Line : Lines)
-        {
-            std::cout << Line << std::endl;
-        }
         return;
     }
 

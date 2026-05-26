@@ -1,6 +1,8 @@
 //Developed by AdeptusXIII(c). All Rights Reserved. UCC 1-308 "Without Prejudice".
 #pragma once
 
+#include "Types/PlayerStateTypes.h"
+
 #include <filesystem>
 #include <string>
 #include <vector>
@@ -42,6 +44,8 @@ public:
     std::filesystem::path GetNextTrackPath() const;
     std::filesystem::path GetTrackPathByIndex(int Index) const;
     std::vector<std::filesystem::path> GetAllTrackPaths() const;
+    std::vector<std::filesystem::path> GetFavoriteTrackPaths() const;
+    std::vector<FCustomTrackListData> GetCustomTrackLists() const;
     std::string GetActiveTrackListName() const;
     int GetActiveTrackListIndex() const;
     int GetTrackListCount() const;
@@ -51,6 +55,9 @@ public:
     bool SetActiveTrackListByIndex(int Index);
     bool SetBufferTracks(const std::vector<std::filesystem::path>& Paths);
     bool SetAllTracks(const std::vector<std::filesystem::path>& Paths);
+    bool SetFavoriteTracks(const std::vector<std::filesystem::path>& TrackPaths);
+    bool SetCustomTrackLists(const std::vector<FCustomTrackListData>& CustomTrackLists);
+
     bool ImportFromBuffer(bool bImportAll, int BufferIndex);
     bool CreateCustomTrackList(const std::string& Name);
     bool DeleteCustomTrackList(const std::string& Name);
