@@ -2,8 +2,9 @@
 
 #include "AudioFileScanner.h"
 
+#include <SFML/Audio/InputSoundFile.hpp>
+
 #include <algorithm>
-#include <iostream>
 #include <unordered_set>
 
 const std::unordered_set<std::string> MAudioFileScanner::AllowedExtensions =
@@ -123,16 +124,27 @@ bool MAudioFileScanner::IsAudioFile(const std::filesystem::path &InPath) const
 {
     if (!std::filesystem::exists(InPath) || !std::filesystem::is_regular_file(InPath))
         return false;
-    
+
+    return HasAllowedExtension(InPath) && CanOpenAudioFile(InPath);
+}
+
+bool MAudioFileScanner::HasAllowedExtension(const std::filesystem::path &InPath) const
+{
     std::string extension = InPath.extension().string();
-    
+
     if (extension.empty())
         return false;
-    
+
     std::transform(extension.begin(), extension.end(), extension.begin(), 
         [](unsigned char c) { return std::tolower(c); });
-    
+
     return AllowedExtensions.find(extension) != AllowedExtensions.end();
+}
+
+bool MAudioFileScanner::CanOpenAudioFile(const std::filesystem::path &InPath) const
+{
+    sf::InputSoundFile SoundFile;
+    return SoundFile.openFromFile(InPath);
 }
 
 int MAudioFileScanner::GetCharPriority(char C) const

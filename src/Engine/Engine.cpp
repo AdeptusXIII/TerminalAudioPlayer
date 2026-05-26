@@ -70,7 +70,7 @@ MEngine::MEngine()
 
 void MEngine::Init()
 {
-    std::string VersionNumber = "0.19.0";
+    std::string VersionNumber = "0.20.0";
     std::cout << stp::msg::ENGINE_INIT << VersionNumber << std::endl;
 
     PlayerStateStorage.EnsureStateFileExists();
@@ -115,8 +115,9 @@ void MEngine::Init()
     if (TrackLibrary.GetTrackListSize() == 0)
     {
         WriteTrackListToTrackLibrary(DefaultContentDir);
-        SavePlayerState();
     }
+
+    SavePlayerState();
 }
 
 void MEngine::SyncAudioState()

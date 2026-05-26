@@ -9,6 +9,11 @@
 
 namespace
 {
+    bool IsStorageSectionHeader(const std::string& Line)
+    {
+        return Line.size() >= 2 && Line.front() == '[' && Line.back() == ']';
+    }
+
     std::string PlaybackModeToStorageString(EPlaybackMode PlaybackMode)
     {
         switch (PlaybackMode)
@@ -258,6 +263,12 @@ bool MPlayerStateStorage::Load(FPlayerStateData &OutState)
             continue;
         }
 
+        if (IsStorageSectionHeader(Line))
+        {
+            CurrentSection.clear();
+            continue;
+        }
+
         // 1. check section [all]
         if (CurrentSection == stp::svst::S_ALL)
         {
@@ -286,7 +297,10 @@ bool MPlayerStateStorage::Load(FPlayerStateData &OutState)
         // 4. check section [active-list]
         if (CurrentSection == stp::svst::S_ACTIVE_LIST)
         {
-            OutState.ActiveListName = Line;
+            if (OutState.ActiveListName.empty())
+            {
+                OutState.ActiveListName = Line;
+            }
             continue;
         }
 
@@ -349,18 +363,18 @@ bool MPlayerStateStorage::EnsureDirectoryExists(const std::filesystem::path &Dir
 {
     std::error_code ErrorCode;
 
-    if (std::filesystem::is_directory(DirectoryPath, ErrorCode))
-    {
-        return true;
-    }
-
+    const bool bExists = std::filesystem::exists(DirectoryPath, ErrorCode);
     if (ErrorCode)
     {
         return false;
     }
 
-    std::filesystem::create_directories(DirectoryPath, ErrorCode);
+    if (bExists)
+    {
+        return std::filesystem::is_directory(DirectoryPath, ErrorCode) && !ErrorCode;
+    }
 
+    std::filesystem::create_directories(DirectoryPath, ErrorCode);
     if (ErrorCode)
     {
         return false;
@@ -373,14 +387,14 @@ std::filesystem::path MPlayerStateStorage::GetStateFilePath() const
 {
     const char* XdgDataHome = std::getenv("XDG_DATA_HOME");
 
-    if (XdgDataHome != nullptr)
+    if (XdgDataHome != nullptr && XdgDataHome[0] != '\0')
     {
         return std::filesystem::path(XdgDataHome) / "TerminalAudioPlayer/state.txt";
     }
 
     const char* Home = std::getenv("HOME");
 
-    if (Home != nullptr)
+    if (Home != nullptr && Home[0] != '\0')
     {
         return std::filesystem::path(Home) / ".local/share/TerminalAudioPlayer/state.txt";
     }

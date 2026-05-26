@@ -30,11 +30,10 @@ public:
     
     
 private:
-    
-    bool LoadBufferFromFile(const std::filesystem::path &InPath);
-    
-    sf::SoundBuffer Buffer;
-    std::optional<sf::Sound> Sound;
+
+    bool OpenMusicFromFile(const std::filesystem::path &InPath, sf::Music& OutMusic);
+
+    std::optional<sf::Music> Music;
     float CurrentVolume = 100.0f;
     bool bLooping = false;
 };

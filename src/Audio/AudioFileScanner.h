@@ -31,6 +31,8 @@ public:
 
 private:
     bool IsAudioFile(const std::filesystem::path& InPath) const;
+    bool HasAllowedExtension(const std::filesystem::path& InPath) const;
+    bool CanOpenAudioFile(const std::filesystem::path& InPath) const;
     int GetCharPriority(char C) const;
     /** А приоритетнее Б? */
     bool IsCharHigherPriority(char A, char B) const;

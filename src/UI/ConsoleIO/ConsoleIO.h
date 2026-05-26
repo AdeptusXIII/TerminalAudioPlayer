@@ -63,8 +63,6 @@ class MConsoleIO
 public:
     MConsoleIO();
     
-    /** NCURSES ConsoleApp-style */
-    //------------------------------------------------------------------------------------------------------------------
     void InitTUI();
     void ResizeTUI();
     void ShutDownTUI();
@@ -78,9 +76,6 @@ public:
     std::wstring GetPreviousCommandFromHistory();
     bool GetTerminalTooSmall() const { return bTerminalTooSmall; }
     std::string ConvertWideToUtf8(const std::wstring& Text) const;
-
-    //------------------------------------------------------------------------------------------------------------------
-    
     
     void PrintTrackList(const FUISnapshotData &UISnapshot);
     void PrintTotalTracksNum(const int &InTotalTracks);
@@ -92,8 +87,6 @@ public:
     void PrintOutputLines(const std::vector<std::string> &Lines);
 private:
     
-    /** NCURSES ConsoleApp-style */
-    //------------------------------------------------------------------------------------------------------------------
     WINDOW* StatusWindow;
     WINDOW* OutputWindow;
     WINDOW* InputWindow;
@@ -111,11 +104,7 @@ private:
 
     bool bTUIActive;
     bool bTerminalTooSmall;
-    //------------------------------------------------------------------------------------------------------------------
-    
-    
-    /** NCURSES ConsoleApp-style helpers */
-    //------------------------------------------------------------------------------------------------------------------
+
     void DeleteTUIWindows();
     void CreateTUIWindows(const FTUILayout &Layout);
     void SetOutputLines(const std::vector<std::string> &Lines);
@@ -130,7 +119,5 @@ private:
     FTUILayout BuildTUILayout(int TerminalWidth, int TerminalHeight);
     FWindowTextArea BuildWindowTextArea(WINDOW* Window);
     void WriteCommandToHistory(const std::string &Command);
-    //------------------------------------------------------------------------------------------------------------------
-    
     std::string FormatTime(float sec);
 };

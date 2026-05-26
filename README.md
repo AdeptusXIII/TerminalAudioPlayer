@@ -5,7 +5,7 @@ Terminal Audio Player is a small C++ learning project.
 The goal is to build a terminal-based audio player while practicing basic software architecture:
 input handling, terminal UI, command processing, state management, track library scanning, and audio playback.
 
-Current project version: `0.19.0`
+Current project version: `0.20.0`
 
 ## Status
 
@@ -23,6 +23,7 @@ The player is usable, but still experimental. It is mainly built as a learning p
 - Track scanning from `~/Music/TAP_content`
 - Manual directory scanning into a temporary buffer list
 - Recursive directory scanning with `scan -r`
+- Audio file validation through SFML readability checks
 - Persistent player state storage in `state.txt`
 - Track lists: `buffer`, `all`, `favorite`, and custom lists
 - Persistent `all`, `favorite`, custom lists, active list, volume, playback mode, and paused track position
@@ -46,7 +47,7 @@ The player is usable, but still experimental. It is mainly built as a learning p
 - Terminal resize handling
 - systemd sleep/hibernate handling: playback pauses before sleep and does not auto-resume
 - Direct AppImage launch from a file manager, if a supported terminal emulator is installed
-- SFML 3 Audio backend
+- SFML 3 Audio backend using `sf::Music` streaming
 
 ## Supported Formats
 
